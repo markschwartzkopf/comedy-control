@@ -1,0 +1,111 @@
+:root {
+  --track-width: calc(var(--fader-element-width) * 0.1);
+  --thumb-height: calc(var(--fader-element-height) * 0.8);
+  --thumb-height: calc(var(--fader-element-width) * 1.5);
+  --thumb-radius: calc(var(--fader-element-width) * 0.1);
+  --thumb-color: lightgray;
+  --track-color: black;
+  --border-color: gray;
+  --thumb-margin-top: calc(
+    var(--track-width) * 0.5 - var(--fader-element-width) * 0.5
+  );
+}
+.fader-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--fader-element-width);
+  height: var(--fader-element-height);
+}
+
+input[type='range'] {
+  position: absolute;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+  width: var(--fader-element-height);
+  height: var(--fader-element-width);
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  width: 100%;
+  height: var(--track-width);
+  cursor: pointer;
+  background: var(--track-color);
+  border-radius: var(--track-width);
+  border: 1px solid var(--border-color);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  border: 1px solid var(--border-color);
+  height: var(--fader-element-width);
+  width: var(--thumb-height);
+  border-radius: var(--thumb-radius);
+  background: var(--thumb-color);
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: var(--thumb-margin-top);
+}
+
+input[type='range']:focus::-webkit-slider-runnable-track {
+  background: var(--track-color);
+}
+
+input[type='range']::-moz-range-track {
+  width: 100%;
+  height: var(--track-width);
+  cursor: pointer;
+  background: var(--track-color);
+  border-radius: var(--track-width);
+  border: 1px solid var(--border-color);
+}
+
+input[type='range']::-moz-range-thumb {
+  border: 1px solid var(--border-color);
+  height: var(--fader-element-width);
+  width: var(--thumb-height);
+  border-radius: var(--thumb-radius);
+  background: var(--thumb-color);
+  cursor: pointer;
+}
+
+input[type='range']::-ms-track {
+  width: 100%;
+  height: var(--track-width);
+  cursor: pointer;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+
+input[type='range']::-ms-fill-lower {
+  background: var(--track-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--track-width);
+}
+
+input[type='range']::-ms-fill-upper {
+  background: var(--track-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--track-width);
+}
+
+input[type='range']::-ms-thumb {
+  margin-top: 1px;
+  border: 1px solid var(--border-color);
+  height: var(--fader-element-width);
+  width: var(--thumb-height);
+  border-radius: var(--thumb-radius);
+  background: var(--thumb-color);
+  cursor: pointer;
+}
+
+input[type='range']:focus::-ms-fill-lower {
+  background: var(--track-color);
+}
+
+input[type='range']:focus::-ms-fill-upper {
+  background: var(--track-color);
+}

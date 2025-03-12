@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <title>Comedy Control</title>
+    <link rel="stylesheet" href="fader.css" />
+    <style>
+      :root {
+        --fader-element-width: 5vh;
+        --fader-element-height: 75vh;
+        --audio-level: 0%;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        height: 100%;
+      }
+      html,
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
+        font-size: max(2vh, 16px);        
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        width: min(100%, 100vh);
+        height: 100%;
+        background-color: #333;
+        color: white;
+      }
+      .svg-icon {
+        height: 1em;
+        cursor: pointer;
+      }
+      .svg-icon:hover {
+        transform: scale(1.2);
+      }
+      .svg-icon:active {
+        transform: scale(0.9);
+      }
+      .svg-icon.active {
+        fill: #0f0;
+        stroke: #0f0;
+      }
+      button {
+        all: unset;
+        display: inline-block;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 1rem;
+        padding: 0.5em 1em;
+        border: 0.2vh solid white;
+        border-radius: 1vh;
+        background-color: black;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        text-align: center; /* Center text */
+        margin: 1vw;
+      }
+
+      button:hover {
+        background-color: dimgray; /* Darken background on hover */
+      }
+
+      button:active {
+        transform: scale(0.95); /* Add a subtle press effect */
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        color: white;
+      }
+      #main {
+        display: flex;
+        flex-direction: row;
+        flex-grow: 1;
+        align-items: center;
+        overflow: hidden;
+        width: 100%;
+      }
+      #rundown {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        overflow: hidden;
+        height: 100%;
+      }
+      #fader {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 0;
+        flex-shrink: 0;
+        margin-right: 1vh;
+        margin-left: 1vh;
+      }
+      #buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        flex-grow: 0;
+        flex-shrink: 0;
+        width: 100%;
+        border-top: 0.5vh solid white;
+      }
+      #vu-background {
+        height: var(--fader-element-height);
+        width: calc(var(--fader-element-width) / 5);
+        margin-right: 1vh;
+        background: linear-gradient(
+          to bottom,
+          #f00,
+          #f00 2%,
+          #ff0 2%,
+          #ff0 38%,
+          #0f0 38%,
+          #0f0
+        );
+      }
+      #vu-level {
+        height: 100%;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+      }
+      .rundown-item {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5vh 1vh;
+        border: 0.2vh solid white;
+        border-radius: 1vh;
+        margin: 0.5vh 0;
+        background-color: black;
+        cursor: pointer;
+        user-select: none;
+      }
+      .rundown-item.current {
+        background-color: dimgray;
+      }
+      .rundown-item > .name {
+        width: 20%;
+      }
+      .rundown-item > .social {
+        width: 48%;
+      }
+      .rundown-item > .time {
+        width: 12%;
+      }
+      .rundown-item > .bumper {
+        width: 20%;
+      }
+      .rundown-item > * {
+        overflow: hidden;
+        padding-left: 0.5vh;
+        padding-right: 0.5vh;
+      }
+      #make-active-button {
+        align-self: center;        
+        margin: 10vh;
+        margin-top: auto;
+      }
+      #modal {
+        position: absolute;
+        z-index: 1;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+      #modal-container {
+        background-color: black;
+        border: 0.2vh solid #888;
+        border-radius: 1vh;
+        padding: 0.5vh;
+        margin: 5vh;
+        display: flex;
+        flex-direction: column;
+      }
+      #modal-buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        margin-top: 1vh;
+      }
+      input[type="text"] {
+        all: unset;
+        display: inline-block;
+        width: 30vh;
+        padding: 0.5vh;
+        border: 0.2vh solid lightgray;
+        border-radius: 1vh;
+        background-color: black;
+        color: white;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+      input[type="text"]:hover {
+        background-color: dimgray;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: white;
+      }
+      input[type="number"] {
+        all: unset;
+        display: inline-block;
+        width: 10vh;
+        padding: 0.5vh;
+        border: 0.2vh solid lightgray;
+        border-radius: 1vh;
+        background-color: black;
+        color: white;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+
+      input[type="number"]:hover {
+        background-color: dimgray;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: white;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div id="modal">
+      <div id="modal-container">
+        <div id="modal-content"></div>
+        <div id="modal-buttons">
+          <button id="modal-cancel">Cancel</button>
+          <button id="modal-save">Save</button>
+        </div>
+      </div>
+    </div>
+    <div id="app">
+      <div id="main">
+        <div id="rundown"></div>
+        <div id="fader" class="fader-container">
+          <input
+            type="range"
+            id="fader-input"
+            min="0"
+            max="1"
+            value="0"
+            step="any"
+          />
+        </div>
+        <div id="vu-background">
+          <div id="vu-level"></div>
+        </div>
+      </div>
+      <div id="buttons">
+        <button id="play">Play Bumper</button>
+        <button id="pause">Stop Bumper</button>
+        <button id="stop">Start Timer</button>
+        <button id="restart">Prep Comic</button>
+      </div>
+    </div>
+  </body>
+  <script>
+    let exports = {};
+  </script>
+  <script src="index.js"></script>
+</html>

@@ -1,0 +1,48 @@
+{
+  "name": "comedy-control",
+  "version": "1.0.0",
+  "description": "Software for controlling tech for Rose City Comedy",
+  "scripts": {
+    "start": "node index.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:server": "node ./node_modules/typescript/bin/tsc -p ./src/server --diagnostics --watch",
+    "watch:browser": "node ./node_modules/typescript/bin/tsc -p ./src/browser --diagnostics --watch",
+    "watch:copy": "onchange -i ./src -- npm-run-all -s build:copy*",
+    "build": "npm-run-all -s build:*",
+    "build:server": "node ./node_modules/typescript/bin/tsc -p ./src/server --diagnostics",
+    "build:browser": "node ./node_modules/typescript/bin/tsc -p ./src/browser --diagnostics",
+    "build:copyhtml": "cpy \"src/browser/**/*.html\" \"dist/browser/\" --parents",
+    "build:copycss": "cpy \"src/browser/**/*.css\" \"dist/browser/\" --parents",
+    "build:copyico": "cpy \"src/browser/favicon.*\" \"dist/browser/\" --parents",
+    "build:copysvg": "cpy \"src/browser/**/*.svg\" \"dist/browser/\" --parents",
+    "create-ico": "node ./favicon/make-favicon.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/markschwartzkopf/comedy-control"
+  },
+  "author": "Mark Schwartzkopf",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@tsconfig/node18": "^18.2.4",
+    "@types/node": "^22.10.2",
+    "@types/statuses": "^2.0.5",
+    "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "cpy-cli": "^5.0.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-promise": "^7.2.1",
+    "globals": "^15.14.0",
+    "npm-run-all": "^4.1.5",
+    "onchange": "^7.1.0",
+    "svg-to-ico": "^1.0.15",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  },
+  "dependencies": {
+    "@spotify/web-api-ts-sdk": "^1.2.0",
+    "ws": "^8.18.0"
+  }
+}
