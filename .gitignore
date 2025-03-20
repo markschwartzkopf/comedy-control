@@ -1,5 +1,5 @@
 node_modules
 dist
-data
+settings.json
 .tsbuildinfo
 spotify-info.json

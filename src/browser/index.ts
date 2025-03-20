@@ -1,4 +1,4 @@
-import { RundownItem } from '../global-types';
+import { RundownItem, RundownItemComicSet } from '../global-types';
 import {
   ClientMessage,
   LogData,
@@ -6,10 +6,6 @@ import {
   Rundown,
   ServerMessage,
 } from '../global-types';
-const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
-const playIconSvg = `<polygon points="5 3 35 20 5 37 5 3"></polygon>`;
-const pauseIconSvg = `<rect x="3" y="3" width="12" height="34"></rect><rect x="25" y="3" width="12" height="34"></rect>`;
-const trashSvg = `<path d="M89 9a4 4 0 0 1 4 4v2h-86v-2a4 4 0 0 1 4 -4z" fill="white"/><path d="M41 9v-5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v5"/><path d="M74.25 94.5a6 6 0 0 0 5.95 -5.15l9.8 -69.85h-80l9.8 69.85a6 6 0 0 0 5.95 5.15z" fill="black"/><path d="M50 30v54" stroke-linecap="round"/><path d="M30 30l4 54" stroke-linecap="round"/><path d="M70 30l-4 54" stroke-linecap="round"/>`;
 
 const faderInput = document.getElementById('fader-input') as HTMLInputElement;
 faderInput.oninput = throttle(() => {
@@ -17,10 +13,11 @@ faderInput.oninput = throttle(() => {
   sendMessage({ type: 'f', l: parseFloat(faderInput.value) });
 }, 100);
 
-let populateItemModal: (
-  rundown: Rundown,
-  currentItem: number
-) => void = () => {};
+
+let localRundown: Rundown = [];
+let localCurrentItem = 0;
+
+let populateItemModal: () => void = () => {};
 
 let makeActiveButton: HTMLButtonElement | null = null;
 const rundownEl = document.getElementById('rundown') as HTMLDivElement;
@@ -62,9 +59,11 @@ function connect() {
             faderInput.value = message.l.toString();
             break;
           }
-          case 'rundown': {
-            populateRundown(message.rundown, message.currentItem);
-            populateItemModal(message.rundown, message.currentItem);
+          case 'settings': {
+            localRundown = message.settings.rundown;
+            localCurrentItem = message.settings.currentRundownItem;            
+            populateRundown();
+            populateItemModal();
             break;
           }
           default:
@@ -84,13 +83,13 @@ setInterval(() => {
   if (!socket) connect();
 }, 1000);
 
-function populateRundown(rundown: Rundown, currentItem: number) {
+function populateRundown() {
   rundownEl.innerHTML = '';
-  for (let i = 0; i < rundown.length; i++) {
-    const item = rundown[i];
+  for (let i = 0; i < localRundown.length; i++) {
+    const item = localRundown[i];
     const itemEl = document.createElement('div');
     itemEl.classList.add('rundown-item');
-    if (i === currentItem) itemEl.classList.add('current');
+    if (i === localCurrentItem) itemEl.classList.add('current');
     if (item.type === 'comic') {
       const nameEl = document.createElement('div');
       nameEl.classList.add('name');
@@ -121,12 +120,12 @@ function populateRundown(rundown: Rundown, currentItem: number) {
         makeActiveButton.parentElement?.removeChild(makeActiveButton);
         makeActiveButton = null;
       }
-      if (i === currentItem) return;
+      if (i === localCurrentItem) return;
       makeActiveButton = document.createElement('button');
       makeActiveButton.id = 'make-active-button';
       makeActiveButton.textContent = `Make "${item.name}" Active Rundown Item`;
       makeActiveButton.onclick = () => {
-        sendMessage({ type: 'set-rundown-item', item: i });
+        sendMessage({ type: 'settings', settings: { currentRundownItem: i } });
         if (makeActiveButton) {
           makeActiveButton.parentElement?.removeChild(makeActiveButton);
           makeActiveButton = null;
@@ -136,13 +135,13 @@ function populateRundown(rundown: Rundown, currentItem: number) {
     };
     function editItem() {
       const modal = displayModal();
-      initItemEditModal(rundown, currentItem, i, modal);
+      initItemEditModal(localRundown, localCurrentItem, i, modal);
     }
     itemEl.ondblclick = editItem;
     setLongPress(itemEl, editItem);
     rundownEl.appendChild(itemEl);
   }
-  const currentRundownItem = rundown[currentItem];
+  const currentRundownItem = localRundown[localCurrentItem];
   const buttonsEl = document.getElementById('buttons') as HTMLDivElement;
   switch (currentRundownItem.type) {
     case 'comic': {
@@ -169,7 +168,7 @@ function populateRundown(rundown: Rundown, currentItem: number) {
       break;
     }
   }
-  if (currentItem < rundown.length - 1) {
+  if (localCurrentItem < localRundown.length - 1) {
     const nextEl = document.createElement('button');
     nextEl.textContent = 'Go to Next';
     buttonsEl.appendChild(nextEl);
@@ -182,33 +181,65 @@ function initItemEditModal(
   itemno: number,
   modal: HTMLDivElement
 ) {
-  const item = rundown[itemno];
-  switch (item.type) {
+  let workingItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItem;
+  function setSaveButtonState() {
+    if (JSON.stringify(rundown[itemno]) !== JSON.stringify(workingItem)) {
+      modalSaveButton.style.display = '';
+    } else {
+      modalSaveButton.style.display = 'none';
+    }
+  }
+  modalSaveButton.onclick = () => {
+    const newRundown = JSON.parse(JSON.stringify(rundown)) as Rundown;
+    newRundown[itemno] = workingItem;
+    sendMessage({ type: 'settings', settings: { rundown: newRundown } });
+    hideModal();
+  }
+  modalSaveButton.style.display = 'none';
+  switch (workingItem.type) {
     case 'comic': {
+      let comicItem = workingItem as RundownItemComicSet;
       const nameDiv = document.createElement('div');
       nameDiv.textContent = 'Name:';
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
+      nameEl.oninput = () => {
+        comicItem.name = nameEl.value;
+        setSaveButtonState();
+        console.log('Name changed:', nameEl.value);
+      }
       nameDiv.appendChild(nameEl);
       modal.appendChild(nameDiv);
       const socialDiv = document.createElement('div');
       socialDiv.textContent = 'Social:';
       const socialEl = document.createElement('input');
       socialEl.type = 'text';
+      socialEl.oninput = () => {
+        comicItem.social = socialEl.value;
+        setSaveButtonState();
+        console.log('Social changed:', socialEl.value);
+      }
       socialDiv.appendChild(socialEl);
       modal.appendChild(socialDiv);
       const timeDiv = document.createElement('div');
       timeDiv.textContent = 'Minutes:';
       const timeEl = document.createElement('input');
       timeEl.type = 'number';
+      timeEl.oninput = () => {
+        comicItem.time = parseFloat(timeEl.value);
+        setSaveButtonState();
+        console.log('Time changed:', timeEl.value);
+      }
       timeDiv.appendChild(timeEl);
       modal.appendChild(timeDiv);
-      populateItemModal = (newRundown: Rundown) => {
-        const item = newRundown[itemno];
-        if (item.type !== 'comic' || newRundown.length !== rundown.length) {
+      populateItemModal = () => {
+        const item = localRundown[itemno];
+        if (item.type !== 'comic' || localRundown.length !== rundown.length) {
           hideModal();
           return;
         }
+        console.log('change')
+        comicItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItemComicSet;
         nameEl.value = item.name;
         socialEl.value = item.social;
         timeEl.value = item.time.toString();
@@ -219,9 +250,9 @@ function initItemEditModal(
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
       modal.appendChild(nameEl);
-      populateItemModal = (newRundown: Rundown) => {
-        const item = newRundown[itemno];
-        if (item.type !== 'preset' || newRundown.length !== rundown.length) {
+      populateItemModal = () => {
+        const item = localRundown[itemno];
+        if (item.type !== 'preset' || localRundown.length !== rundown.length) {
           hideModal();
           return;
         }
@@ -230,7 +261,7 @@ function initItemEditModal(
       break;
     }
   }
-  populateItemModal(rundown, currentItem);
+  populateItemModal();
 }
 
 function sendMessage(message: ClientMessage) {
@@ -278,7 +309,7 @@ function minutesToTime(minutes: number) {
   return `${mins}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function displayModal(save?: () => void) {
+function displayModal() {
   const modalContent = document.getElementById(
     'modal-content'
   ) as HTMLDivElement;
@@ -288,7 +319,6 @@ function displayModal(save?: () => void) {
   modal.onclick = (e) => {
     if (e.target === modal) hideModal();
   };
-
   return modalContent;
 }
 

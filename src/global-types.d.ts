@@ -1,7 +1,27 @@
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
 export type LogData =
   | { [k: string]: number | string | boolean | null | LogData }
   | (number | string | boolean | null | LogData)[];
 export type LogType = 'info' | 'error' | 'warn';
+
+export type Settings = {
+  musicChannel: number;
+  xairAddress: string;
+  rundown: Rundown;
+  currentRundownItem: number;
+  govees: { [k: string]: string };
+  spotify: {
+    clientId: string | null;
+    clientSecret: string | null;
+    refreshToken: string | null;
+    accessToken: string | null;
+    tokenExpiration: number | null;
+    redirectUri: string;
+  }
+};
 
 type ServerMessageFader = {
   type: 'f';
@@ -13,16 +33,15 @@ type ServerMessageMeter = {
   l: number;
 };
 
-type ServerMessageRundown = {
-  type: 'rundown';
-  rundown: Rundown;
-  currentItem: number;
+type ServerMessageSettings = {
+  type: 'settings';
+  settings: Settings;
 };
 
 export type ServerMessage =
   | ServerMessageFader
   | ServerMessageMeter
-  | ServerMessageRundown;
+  | ServerMessageSettings;
 
 type ClientMessageLog = {
   type: 'log';
@@ -36,12 +55,21 @@ type ClientMessageFader = {
   l: number;
 };
 
-type ClientMessageRundownItem = {
-  type: 'set-rundown-item';
-  item: number;
+type ClientMessageSettings = {
+  type: 'settings';
+  settings: DeepPartial<Settings>;
 };
 
-export type ClientMessage = ClientMessageLog | ClientMessageFader | ClientMessageRundownItem;
+type ClientMessageSpotifyCode = {
+  type: 'spotify-code';
+  code: string;
+};
+
+export type ClientMessage =
+  | ClientMessageLog
+  | ClientMessageFader
+  | ClientMessageSettings
+  | ClientMessageSpotifyCode;
 
 type RundownItemComicSet = {
   type: 'comic';

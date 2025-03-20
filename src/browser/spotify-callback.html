@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <title>Comedy Control Spotify Callback</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
+        font-size: max(2vh, 16px);
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #333;
+        color: white;
+      }
+      button {
+        all: unset;
+        display: inline-block;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 1rem;
+        padding: 0.5em;
+        border: 0.2vh solid white;
+        border-radius: 1vh;
+        background-color: black;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        text-align: center; /* Center text */
+        margin: 1vw;
+      }
+      button:hover {
+        background-color: dimgray; /* Darken background on hover */
+      }
+
+      button:active {
+        transform: scale(0.95); /* Add a subtle press effect */
+      }
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        color: white;
+      }
+      #modal {
+        position: absolute;
+        z-index: 1;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+      #modal-container {
+        background-color: black;
+        border: 0.2vh solid #888;
+        border-radius: 1vh;
+        padding: 0.5vh;
+        margin: 5vh;
+        display: flex;
+        flex-direction: column;
+      }
+      #modal-buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        margin-top: 1vh;
+      }
+      input[type='text'] {
+        all: unset;
+        display: inline-block;
+        width: 30vh;
+        padding: 0.5vh;
+        border: 0.2vh solid lightgray;
+        border-radius: 1vh;
+        background-color: black;
+        color: white;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+      input[type='text']:hover {
+        background-color: dimgray;
+      }
+      input[type='text']:focus {
+        outline: none;
+        border-color: white;
+      }
+      input[type='number'] {
+        all: unset;
+        display: inline-block;
+        width: 10vh;
+        padding: 0.5vh;
+        border: 0.2vh solid lightgray;
+        border-radius: 1vh;
+        background-color: black;
+        color: white;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+
+      input[type='number']:hover {
+        background-color: dimgray;
+      }
+
+      input[type='number']:focus {
+        outline: none;
+        border-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Authorization Successful</h1>
+    <p>Handling...</p>
+  </body>
+  <script>
+    let exports = {};
+  </script>
+  <script src="spotify-callback.js"></script>
+</html>

@@ -1,43 +1,31 @@
-import fs from 'fs';
-import { initializeServer } from './http-server.js';
-import path from 'path';
+//import fs from 'fs';
+//import path from 'path';
 
+export const util = {
+  setSettings: (newSettings: DeepPartial<Settings>) => {
+    //replaced by settings.ts
+  },
+  getSettings: () => {
+    return null as unknown as Settings;
+  }
+}
+
+import { initializeData } from './settings.js';
 import { log } from './logger.js';
-import { initializeSpotify } from './spotify.js';
-import { connectXair } from './xair.js';
-import { connectGovees } from './govee.js';
+import { DeepPartial, Settings } from '../global-types.js';
+
+
+//import { initializeSpotify } from './spotify.js';
+//import { connectXair } from './xair.js';
+//import { connectGovees } from './govee.js';
 
 //temp
-connectXair();
-connectGovees();
-
-const grandparentDir = path.dirname(path.dirname(__dirname));
-const filePath = path.join(grandparentDir, 'spotify-info.json');
-fs.promises
-  .readFile(filePath, 'utf-8')
-  .then((data) => {
-    return new Promise<{ id: string; secret: string; code: string }>((resolve, reject) => {
-      try {
-        const parsedData = JSON.parse(data);
-        if (
-          typeof parsedData.id !== 'string' ||
-          typeof parsedData.secret !== 'string' ||
-          typeof parsedData.code !== 'string'
-        ) {
-          reject('Missing or incorrect spotify-info.json');
-        } else resolve(parsedData);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  })
-  /* .then((data) => {
-    console.log(data);
-    return initializeSpotify(data.id, data.secret, data.code);
-  }) */
+//connectXair();
+//connectGovees();
+initializeData()
   .then(() => {
-    initializeServer();
+    return import('./http-server.js');
   })
   .catch((err) => {
-    log('error', err);
+    log('error', `Error in initialization: ${err}`);
   });

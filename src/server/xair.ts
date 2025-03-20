@@ -1,7 +1,7 @@
 import dgram from 'dgram';
-import { getMusicChannel, getXairAddress } from './settings';
 import { log } from './logger';
 import { sendServerMessage } from './http-server';
+import { getSettings } from './settings';
 
 const MIXER_PORT = 10023; //10023 for X32, 10024 for XAir
 
@@ -23,11 +23,11 @@ export function connectXair() {
   mixerSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   const thisSocket = mixerSocket;
   thisSocket.bind(52361, '0.0.0.0', () => {
-    thisSocket.connect(MIXER_PORT, getXairAddress(), () => {
+    thisSocket.connect(MIXER_PORT, getSettings().xairAddress, () => {
       log('info', 'Connected to mixer');
       connected = true;
       subscribe();
-      requestFaderLevel(getMusicChannel());
+      requestFaderLevel(getSettings().musicChannel);
       thisSocket.on('message', (msg) => {
         let index = msg.indexOf(0x00);
         let command = msg.toString('utf-8', 0, index);
@@ -59,7 +59,7 @@ export function connectXair() {
                   console.log('Music Channel "On" boolean:' + Boolean(value));
                 }
                 break; */
-              case `ch/${getMusicChannel()
+              case `ch/${getSettings().musicChannel
                 .toString()
                 .padStart(2, '0')}/mix/fader`:
                 if (oscFormat != 'f') {
@@ -149,7 +149,7 @@ function subscribe() {
     send('/xremote');
     const meterSubscribe: oscArgument[] = [
       { type: 's', data: '/meters/6' },
-      { type: 'i', data: getMusicChannel() - 1 },
+      { type: 'i', data: getSettings().musicChannel - 1 },
       { type: 'i', data: 0 },
       { type: 'i', data: 1 },
     ];
@@ -225,7 +225,7 @@ export function setFaderLevel(channel: number, level: number) {
     send(`/ch/${channel.toString().padStart(2, '0')}/mix/fader`, [
       { type: 'f', data: level },
     ]);
-    if (channel == getMusicChannel()) {
+    if (channel == getSettings().musicChannel) {
       musicFaderLevel = level;
       sendServerMessage({
         type: 'f',
