@@ -92,13 +92,24 @@ type ClientMessageGetSpotifyPlaylists = {
   type: 'get-spotify-playlists';
 };
 
+type ClientMessageSpotifyPlay = {
+  type: 'spotify-play';
+  id: string;
+}
+
+type ClientMessageSpotifyPause = {
+  type: 'spotify-pause';
+}
+
 export type ClientMessage =
   | ClientMessageLog
   | ClientMessageFader
   | ClientMessageSettings
   | ClientMessageSpotifyCode
   | ClientMessageSpotifySearch
-  | ClientMessageGetSpotifyPlaylists;
+  | ClientMessageGetSpotifyPlaylists
+  | ClientMessageSpotifyPlay
+  | ClientMessageSpotifyPause;
 
 export type RundownItemComicSet = {
   type: 'comic';

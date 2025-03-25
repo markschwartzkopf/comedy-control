@@ -2,8 +2,9 @@
 //import path from 'path';
 
 export const util = {
+  // These will be replaced by settings.ts
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setSettings: (newSettings: DeepPartial<Settings>) => {
-    //replaced by settings.ts
   },
   getSettings: () => {
     return null as unknown as Settings;

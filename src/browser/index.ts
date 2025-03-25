@@ -14,7 +14,6 @@ import {
 let handleTracks: ((tracks: SpotifyTrack[]) => void) | null = null;
 const faderInput = document.getElementById('fader-input') as HTMLInputElement;
 faderInput.oninput = throttle(() => {
-  console.log('Fader input changed:', faderInput.value);
   sendMessage({ type: 'f', l: parseFloat(faderInput.value) });
 }, 100);
 
@@ -127,9 +126,7 @@ function populateRundown() {
       socialEl.classList.add('social');
       socialEl.textContent = item.social;
       itemEl.appendChild(socialEl);
-      if (item.bumper && spotifyConnected) {
-        itemEl.appendChild(createTrackDiv(item.bumper));
-      }
+      itemEl.appendChild(createTrackDiv(item.bumper));
       const timeEl = document.createElement('div');
       timeEl.classList.add('time');
       timeEl.textContent = minutesToTime(item.time);
@@ -172,12 +169,22 @@ function populateRundown() {
     case 'comic': {
       buttonsEl.innerHTML = '';
       if (currentRundownItem.bumper) {
+        const trackId = currentRundownItem.bumper.id;
         const bumperPLayEl = document.createElement('button');
         bumperPLayEl.textContent = 'Play Bumper';
         buttonsEl.appendChild(bumperPLayEl);
+        bumperPLayEl.onclick = () => {
+          sendMessage({
+            type: 'spotify-play',
+            id: trackId,
+          });
+        };
       }
       const bumperStopEl = document.createElement('button');
       bumperStopEl.textContent = 'Stop Spotify';
+      bumperStopEl.onclick = () => {
+        sendMessage({ type: 'spotify-pause' });
+      };
       buttonsEl.appendChild(bumperStopEl);
       const timerStartEl = document.createElement('button');
       timerStartEl.textContent = 'Start Timer';
@@ -196,6 +203,16 @@ function populateRundown() {
   if (localCurrentItem < localRundown.length - 1) {
     const nextEl = document.createElement('button');
     nextEl.textContent = 'Go to Next';
+    nextEl.onclick = () => {
+      if (localCurrentItem >= localRundown.length - 1) {
+        log('error', 'Clicked next button that should not exist');
+        return;
+      }
+      sendMessage({
+        type: 'settings',
+        settings: { currentRundownItem: localCurrentItem + 1 },
+      });
+    };
     buttonsEl.appendChild(nextEl);
   }
 }
@@ -232,7 +249,6 @@ function initItemEditModal(
         comicItem.name = nameEl.value;
         workingItem = comicItem;
         setSaveButtonState();
-        console.log('Name changed:', nameEl.value);
       };
       nameDiv.appendChild(nameEl);
       modal.appendChild(nameDiv);
@@ -244,7 +260,6 @@ function initItemEditModal(
         comicItem.social = socialEl.value;
         workingItem = comicItem;
         setSaveButtonState();
-        console.log('Social changed:', socialEl.value);
       };
       socialDiv.appendChild(socialEl);
       modal.appendChild(socialDiv);
@@ -307,13 +322,17 @@ function initBumperPickModal(
   itemno: number
 ) {
   const modal = displayModal();
+  modal.style.display = 'flex';
+  modal.style.flexDirection = 'column';
   modalCancelButton.onclick = () => {
     const modal = displayModal();
     initItemEditModal(rundown, currentItem, itemno, modal);
   };
   const trackListDiv = document.createElement('div');
+  trackListDiv.classList.add('tracklist');
   modal.appendChild(trackListDiv);
-  handleTracks = (tracks: SpotifyTrack[]) => {
+  handleTracks = (tracksIn: SpotifyTrack[]) => {
+    const tracks = [...tracksIn, null];
     if (!modal.contains(trackListDiv)) {
       console.log('Song select modal no longer active, resetting handleTracks');
       handleTracks = null;
@@ -326,15 +345,17 @@ function initBumperPickModal(
         const item = localRundown[itemno];
         hideModal();
         if (item.type !== 'comic') {
-          console.error('Item is not a comic, cannot set bumper');
+          log('error', 'Item is not a comic, cannot set bumper');
           return;
         }
-        item.bumper = {
-          id: track.id,
-          name: track.name,
-          artist: track.artist,
-          art: track.art,
-        };
+        item.bumper = track
+          ? {
+              id: track.id,
+              name: track.name,
+              artist: track.artist,
+              art: track.art,
+            }
+          : null;
         sendMessage({
           type: 'settings',
           settings: { rundown: localRundown },
@@ -343,35 +364,61 @@ function initBumperPickModal(
       trackListDiv.appendChild(trackDiv);
     });
   };
+  const searchDiv = document.createElement('div');
+  searchDiv.textContent = 'Search:';
+  const searchEl = document.createElement('input');
+  searchEl.type = 'text';
+  searchEl.onkeyup = (e) => {
+    if (e.key === 'Enter' || !searchEl.value) {
+      if (!searchEl.value) {
+        sendMessage({ type: 'spotify-search' });
+        return;
+      } else
+        sendMessage({
+          type: 'spotify-search',
+          query: searchEl.value,
+        });      
+    }
+  };
+  searchDiv.appendChild(searchEl);
+  modal.appendChild(searchDiv);
   sendMessage({ type: 'spotify-search' });
 }
 
-function createTrackDiv(track: {
-  id: string;
-  name: string;
-  artist: string;
-  album?: string;
-  duration_ms?: number;
-  popularity?: number;
-  art: string;
-}) {
+function createTrackDiv(
+  track: {
+    id: string;
+    name: string;
+    artist: string;
+    album?: string;
+    duration_ms?: number;
+    popularity?: number;
+    art: string;
+  } | null
+) {
   const trackDiv = document.createElement('div');
   trackDiv.classList.add('track');
-  const artEl = document.createElement('img');
-  artEl.classList.add('art');
-  artEl.src = track.art;
-  trackDiv.appendChild(artEl);
+  if (track) {
+    const artEl = document.createElement('img');
+    artEl.classList.add('art');
+    artEl.src = track.art;
+    trackDiv.appendChild(artEl);
+  } else {
+    const artEl = document.createElement('div');
+    artEl.classList.add('art');
+    trackDiv.appendChild(artEl);
+  }
   const infoSpan = document.createElement('span');
   const nameEl = document.createElement('div');
   nameEl.classList.add('name');
-  nameEl.textContent = track.name;
+  nameEl.textContent = track ? track.name : 'No track';
   infoSpan.appendChild(nameEl);
   const artistEl = document.createElement('div');
   artistEl.classList.add('artist');
-  artistEl.textContent = track.artist;
+  artistEl.textContent = track ? track.artist : '';
   infoSpan.appendChild(artistEl);
   trackDiv.appendChild(infoSpan);
-  if (track.album && track.duration_ms && track.popularity)
+  if (track && track.album && track.duration_ms && track.popularity)
     trackDiv.title = `Album: ${track.album}\nDuration: ${msToTimeString(
       track.duration_ms
     )}\nPopularity: ${track.popularity}%`;
@@ -380,10 +427,10 @@ function createTrackDiv(track: {
 
 function sendMessage(message: ClientMessage) {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    console.log('Sending message:', message);
     socket.send(JSON.stringify(message));
   } else console.error(`Socket not open, can't send message`);
 }
+
 let localLogNumber = 0;
 function log(type: LogType, description: string, data?: LogData) {
   localLogNumber++;
@@ -428,6 +475,7 @@ function displayModal() {
     'modal-content'
   ) as HTMLDivElement;
   modalContent.innerHTML = '';
+  modalContent.style.display = '';
   const modal = document.getElementById('modal') as HTMLDivElement;
   modal.style.display = 'flex';
   modal.onclick = (e) => {

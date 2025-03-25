@@ -9,6 +9,8 @@ import {
   exchangeSpotifyCodeForTokens,
   getPlaylists,
   getPlaylistTracks,
+  pauseTrack,
+  playTrack,
   searchForTrack,
 } from './spotify';
 import { util } from './main';
@@ -113,9 +115,7 @@ const httpServer = http
 
       ws.on('message', (message) => {
         try {
-          console.log(1);
           const msg = JSON.parse(message.toString()) as ClientMessage;
-          console.log(2);
           switch (msg.type) {
             case 'log': {
               logBrowser(
@@ -171,6 +171,18 @@ const httpServer = http
                 .catch((err) => {
                   log('error', `Error getting Spotify playlists: ${err}`);
                 });
+              break;
+            }
+            case 'spotify-play': {
+              playTrack(msg.id).catch((err) => {
+                log('error', `Error playing track: ${err}`);
+              });
+              break;
+            }
+            case 'spotify-pause': {
+              pauseTrack().catch((err) => {
+                log('error', `Error pausing track: ${err}`);
+              });
               break;
             }
             default:

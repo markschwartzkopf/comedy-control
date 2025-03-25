@@ -7,7 +7,7 @@ import { hasPropertyWithType } from './utils';
 
 const spotifyRedirectUri = 'http://localhost:9999/spotify-callback.html';
 const MARGIN = 1000 * 60 * 5; // 5 minutes
-const MINIMUM_ART_SIZE = 300;
+const MINIMUM_ART_SIZE = 100;
 
 let refreshTokenTimeout: NodeJS.Timeout | null = null;
 
@@ -284,39 +284,85 @@ function getSpotifyUserInfo() {
 }
 
 export function playTrack(trackUri: string) {
-  const accessToken = util.getSettings().spotify.accessToken;
-  if (!accessToken) {
-    log('error', 'No access token, cannot play track');
-    return;
-  }
-  const data = JSON.stringify({
-    uris: [trackUri],
-  });
-
-  const options = {
-    hostname: 'api.spotify.com',
-    path: '/v1/me/player/play',
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-  };
-
-  const req = https.request(options, (res) => {
-    //res.statusCode should be 204. Not putting a check in unless is seems like it's needed though
-    res.on('data', (d) => {
-      process.stdout.write(d);
+  return new Promise<void>((resolve, reject) => {
+    const accessToken = util.getSettings().spotify.accessToken;
+    if (!accessToken) {
+      reject('No access token, cannot play track');
+      return;
+    }
+    const data = JSON.stringify({
+      uris: ['spotify:track:' + trackUri],
     });
-  });
 
-  req.on('error', (e) => {
-    console.error(`Problem with playTrack request: ${e.message}`);
-  });
+    const options = {
+      hostname: 'api.spotify.com',
+      path: '/v1/me/player/play',
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    };
 
-  req.write(data);
-  req.end();
+    const req = https.request(options, (res) => {
+      res.on('end', () => {
+        if (res.statusCode === 204) {
+          resolve();
+        } else {
+          reject(new Error(`Failed to play track: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      log('error', `Problem with playTrack request: ${e.message}`);
+    });
+
+    req.write(data);
+    req.end();
+  });
+}
+
+export function pauseTrack() {
+  return new Promise<void>((resolve, reject) => {
+    const accessToken = util.getSettings().spotify.accessToken;
+    if (!accessToken) {
+      reject('No access token, cannot pause track');
+      return;
+    }
+
+    const options = {
+      hostname: 'api.spotify.com',
+      path: '/v1/me/player/pause',
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        console.log(data);
+        if (res.statusCode === 200) {
+          resolve();
+        } else {
+          reject(new Error(`Failed to pause: ${res.statusCode} ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      log('error', `Problem with pause request: ${e.message}`);
+    });
+
+    req.end();
+  });
 }
 
 export function searchForTrack(
@@ -644,7 +690,9 @@ function hasTracklist(input: unknown): input is { tracks: { items: Track[] } } {
   return rtn;
 }
 
-function isPlaylistItems(input: unknown): input is { items: {track: Track}[] } {
+function isPlaylistItems(
+  input: unknown
+): input is { items: { track: Track }[] } {
   const rtn =
     typeof input === 'object' &&
     input !== null &&
@@ -659,7 +707,10 @@ function isPlaylistItems(input: unknown): input is { items: {track: Track}[] } {
       );
     });
   if (!rtn)
-    log('error', `Spotify playlist items object failed: ${JSON.stringify(input)}`);
+    log(
+      'error',
+      `Spotify playlist items object failed: ${JSON.stringify(input)}`
+    );
   return rtn;
 }
 
