@@ -1,1 +1,5 @@
+Remove max width
+Adjust font sizing to be based on width not height
+createTrackDiv to handle null input
+Add Spotify search functionality
 Change meter subscription to work for Xair

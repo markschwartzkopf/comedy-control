@@ -3,11 +3,59 @@ import {
   LogData,
   LogType,
   ServerMessage,
+  Settings,
 } from '../global-types';
 
+let settings: Settings | null = null;
 
-function addConnectSpotifyButton() {
-  if (window.location.host !== 'localhost:9999') return;
+const xairAddress = document.getElementById('xair-address') as HTMLInputElement;
+const musicChannel = document.getElementById(
+  'music-channel'
+) as HTMLInputElement;
+const defaultPlaylist = document.getElementById(
+  'default-playlist'
+) as HTMLInputElement;
+xairAddress.oninput = () => {
+  setButtons();
+};
+musicChannel.oninput = () => {
+  setButtons();
+};
+defaultPlaylist.oninput = () => {
+  setButtons();
+};
+const buttons = document.getElementById('buttons') as HTMLDivElement;
+const saveButton = document.getElementById('save') as HTMLButtonElement;
+const resetButton = document.getElementById('reset') as HTMLButtonElement;
+resetButton.onclick = populateValues;
+saveButton.onclick = () => {
+  sendMessage({
+    type: 'settings',
+    settings: {
+      xairAddress: xairAddress.value,
+      musicChannel: parseInt(musicChannel.value),
+      spotify: {
+        defaultPlaylist: defaultPlaylist.value,
+      },
+    },
+  });
+  setButtons();
+};
+
+function populateSpotifyFooter() {
+  const footer = document.getElementById('spotify-footer') as HTMLDivElement;
+  footer.innerHTML = '';
+  if (settings && settings.spotify.refreshToken) {
+    footer.innerHTML = `Connected to Spotify`;
+    if (settings.spotify.user.name) {
+      footer.innerHTML += ` as ${settings.spotify.user.name}`;
+    }
+    return;
+  }
+  if (window.location.host !== 'localhost:9999') {
+    footer.innerHTML = `Spotify not connected, load this page from the host computer via "http://localhost:9999" to connect Spotify`;
+    return;
+  }
   const button = document.createElement('button');
   button.textContent = 'Connect Spotify';
   button.onclick = () => {
@@ -36,11 +84,13 @@ function addConnectSpotifyButton() {
         }
       };
       window.addEventListener('message', codeListener);
-    } else console.error('No Spotify client ID');
+    } else {
+      log('error', "Spotify credentials not loaded, can't connect");
+      console.log(spotifyClientId, spotifyRedirectUri);
+    }
   };
-  document.getElementById('app')!.appendChild(button);
+  footer.appendChild(button);
 }
-addConnectSpotifyButton();
 
 let spotifyClientId: string | null = null;
 let spotifyRedirectUri = '';
@@ -55,12 +105,36 @@ function connect() {
   socket.onmessage = (event) => {
     if (typeof event.data === 'string') {
       try {
-        const message: ServerMessage = JSON.parse(event.data);
+        const message = JSON.parse(event.data) as ServerMessage;
         switch (message.type) {
           case 'settings': {
-            console.log('Settings:', message.settings);
-            spotifyClientId = message.settings.spotify.clientId;            
+            spotifyClientId = message.settings.spotify.clientId;
             spotifyRedirectUri = message.settings.spotify.redirectUri;
+            let changed = false;
+            if (
+              !settings ||
+              message.settings.spotify.user.name !== settings.spotify.user.name
+            ) {
+              changed = true;
+            }
+            if (
+              !settings ||
+              message.settings.spotify.refreshToken !==
+                settings.spotify.refreshToken
+            ) {
+              changed = true;
+            }
+            settings = message.settings;
+            if (changed || !settings) populateSpotifyFooter();
+            populateValues();
+            break;
+          }
+          case 'spotify-tracks': {
+            console.log('Spotify tracks:', message.tracks);
+            break;
+          }
+          case 'spotify-playlists': {
+            console.log('Spotify playlists:', message.playlists);
             break;
           }
           case 'f': {
@@ -113,4 +187,31 @@ function generateRandomString(length: number) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }
   return text;
+}
+
+function setButtons() {
+  let changed = false;
+  if (settings && xairAddress.value !== settings.xairAddress) {
+    changed = true;
+  }
+  if (settings && parseInt(musicChannel.value) !== settings.musicChannel) {
+    changed = true;
+  }
+  if (settings && defaultPlaylist.value !== settings.spotify.defaultPlaylist) {
+    changed = true;
+  }
+  if (changed) {
+    buttons.style.display = '';
+  } else {
+    buttons.style.display = 'none';
+  }
+}
+
+function populateValues() {
+  xairAddress.value = settings ? settings.xairAddress || '' : '';
+  musicChannel.value = settings ? settings.musicChannel?.toString() || '' : '';
+  defaultPlaylist.value = settings
+    ? settings.spotify.defaultPlaylist || ''
+    : '';
+  setButtons();
 }

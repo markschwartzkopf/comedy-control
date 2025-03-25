@@ -5,7 +5,12 @@ import { WebSocket } from 'ws';
 import { ClientMessage, ServerMessage } from '../global-types';
 import { log, logBrowser } from './logger';
 import { getMusicFaderLevel, setFaderLevel } from './xair';
-import { exchangeSpotifyCodeForTokens } from './spotify';
+import {
+  exchangeSpotifyCodeForTokens,
+  getPlaylists,
+  getPlaylistTracks,
+  searchForTrack,
+} from './spotify';
 import { util } from './main';
 
 const PORT = 9999;
@@ -97,18 +102,20 @@ const httpServer = http
         'info',
         `Websocket connection established to ${ip}. Active connections: ${connections.length}`
       );
-      sendServerMessage({ type: 'f', l: getMusicFaderLevel() }, ws);      
+      sendServerMessage({ type: 'f', l: getMusicFaderLevel() }, ws);
       sendServerMessage(
         {
           type: 'settings',
-          settings: util.getSettings()
+          settings: util.getSettings(),
         },
         ws
       );
 
       ws.on('message', (message) => {
         try {
+          console.log(1);
           const msg = JSON.parse(message.toString()) as ClientMessage;
+          console.log(2);
           switch (msg.type) {
             case 'log': {
               logBrowser(
@@ -120,7 +127,7 @@ const httpServer = http
               break;
             }
             case 'f': {
-              setFaderLevel(util.getSettings().musicChannel, msg.l);
+              setFaderLevel(util.getSettings().musicChannel || 0, msg.l);
               break;
             }
             case 'settings': {
@@ -130,6 +137,40 @@ const httpServer = http
             case 'spotify-code': {
               log('info', `Received Spotify code from client`);
               exchangeSpotifyCodeForTokens(msg.code);
+              break;
+            }
+            case 'spotify-search': {
+              if (!msg.query) {
+                getPlaylistTracks()
+                  .then((tracks) => {
+                    sendServerMessage({ type: 'spotify-tracks', tracks }, ws);
+                  })
+                  .catch((err) => {
+                    log('error', `Error getting Spotify tracks: ${err}`);
+                  });
+                break;
+              }
+              const args = msg.offset ? [msg.query, msg.offset] : [msg.query];
+              searchForTrack(...(args as [string, number]))
+                .then((tracks) => {
+                  sendServerMessage({ type: 'spotify-tracks', tracks }, ws);
+                })
+                .catch((err) => {
+                  log('error', `Error searching for track: ${err}`);
+                });
+              break;
+            }
+            case 'get-spotify-playlists': {
+              getPlaylists()
+                .then((playlists) => {
+                  sendServerMessage(
+                    { type: 'spotify-playlists', playlists },
+                    ws
+                  );
+                })
+                .catch((err) => {
+                  log('error', `Error getting Spotify playlists: ${err}`);
+                });
               break;
             }
             default:
@@ -151,5 +192,3 @@ const httpServer = http
       });
     });
   });
-
-

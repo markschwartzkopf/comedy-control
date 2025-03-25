@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <title>Comedy Control Settings</title>
-    <style>      
+    <style>
       *,
       *::before,
       *::after {
@@ -40,7 +40,6 @@
       button:hover {
         background-color: dimgray; /* Darken background on hover */
       }
-
       button:active {
         transform: scale(0.95); /* Add a subtle press effect */
       }
@@ -51,6 +50,25 @@
         width: 100%;
         overflow: hidden;
         color: white;
+      }
+      #main {
+        flex-grow: 1;
+        overflow: hidden;
+        width: 100%;
+        padding: 1vh;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #spotify-footer {
+        flex-grow: 0;
+        flex-shrink: 0;
+        width: 100%;
+        border-top: 0.5vh solid white;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.5vh;
       }
       #modal {
         position: absolute;
@@ -91,6 +109,7 @@
         color: white;
         font-family: inherit;
         font-size: 1rem;
+        margin: 0.5vh;
       }
       input[type='text']:hover {
         background-color: dimgray;
@@ -110,12 +129,11 @@
         color: white;
         font-family: inherit;
         font-size: 1rem;
+        margin: 0.5vh;
       }
-
       input[type='number']:hover {
         background-color: dimgray;
       }
-
       input[type='number']:focus {
         outline: none;
         border-color: white;
@@ -133,7 +151,25 @@
       </div>
     </div>
     <div id="app">
-      yo
+      <div id="main">
+        <div>
+          X Air address:
+          <input type="text" id="xair-address" />
+        </div>
+        <div>
+          Music channel:
+          <input type="number" id="music-channel" />
+        </div>
+        <div>
+          Default Playlist: https://open.spotify.com/playlist/
+          <input type="text" id="default-playlist" />
+        </div>
+        <div id="buttons" style="display: none;">
+          <button id="reset">Revert</button>
+          <button id="save">Save</button>
+        </div>
+      </div>
+      <div id="spotify-footer"></div>
     </div>
   </body>
   <script>

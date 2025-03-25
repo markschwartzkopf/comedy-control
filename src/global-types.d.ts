@@ -8,8 +8,8 @@ export type LogData =
 export type LogType = 'info' | 'error' | 'warn';
 
 export type Settings = {
-  musicChannel: number;
-  xairAddress: string;
+  musicChannel: number | null;
+  xairAddress: string | null;
   rundown: Rundown;
   currentRundownItem: number;
   govees: { [k: string]: string };
@@ -20,7 +20,12 @@ export type Settings = {
     accessToken: string | null;
     tokenExpiration: number | null;
     redirectUri: string;
-  }
+    defaultPlaylist: string | null;
+    user: {
+      id: string | null;
+      name: string | null;
+    };
+  };
 };
 
 type ServerMessageFader = {
@@ -38,10 +43,22 @@ type ServerMessageSettings = {
   settings: Settings;
 };
 
+type ServerMessageSpotifyTracks = {
+  type: 'spotify-tracks';
+  tracks: SpotifyTrack[];
+};
+
+type ServerMessageSpotifyPlaylists = {
+  type: 'spotify-playlists';
+  playlists: SpotifyPlaylist[];
+};
+
 export type ServerMessage =
   | ServerMessageFader
   | ServerMessageMeter
-  | ServerMessageSettings;
+  | ServerMessageSettings
+  | ServerMessageSpotifyTracks
+  | ServerMessageSpotifyPlaylists;
 
 type ClientMessageLog = {
   type: 'log';
@@ -65,26 +82,77 @@ type ClientMessageSpotifyCode = {
   code: string;
 };
 
+type ClientMessageSpotifySearch = {
+  type: 'spotify-search';
+  query?: string;
+  offset?: number;
+};
+
+type ClientMessageGetSpotifyPlaylists = {
+  type: 'get-spotify-playlists';
+};
+
 export type ClientMessage =
   | ClientMessageLog
   | ClientMessageFader
   | ClientMessageSettings
-  | ClientMessageSpotifyCode;
+  | ClientMessageSpotifyCode
+  | ClientMessageSpotifySearch
+  | ClientMessageGetSpotifyPlaylists;
 
-type RundownItemComicSet = {
+export type RundownItemComicSet = {
   type: 'comic';
   name: string;
-  social: string;
-  bumperId: string | null;
-  bumperTitle: string | null;
+  social: string | null;
+  bumper: { id: string; name: string; artist: string; art: string } | null;
   time: number; //in minutes
 };
 
 type RundownItemPreset = {
   type: 'preset';
   name: string;
-  endTime?: string;
+  endTime?: number;
 };
 
 type RundownItem = RundownItemComicSet | RundownItemPreset;
 export type Rundown = RundownItem[];
+
+export type SpotifyTrack = {
+  id: string;
+  name: string;
+  artist: string;
+  album: string;
+  duration_ms: number;
+  art: string;
+  popularity: number;
+};
+
+export type SpotifyPlaylist = {
+  id: string;
+  name: string;
+  art: string;
+};
+
+/* 
+function simplifyTracklist(tracklist: Track[]) {
+  return tracklist.map((track) => ({
+    id: track.id,
+    name: track.name,
+    artist: track.artists.map((artist) => artist.name).join(', '),
+    album: track.album.name,
+    duration_ms: track.duration_ms,
+    art: pickAlbumArt(track.album),
+    popularity: track.popularity,
+  }));
+}
+
+*/
+
+declare global {
+  interface JSON {
+    parse(
+      text: string,
+      reviver?: (this: any, key: string, value: any) => any
+    ): unknown;
+  }
+}

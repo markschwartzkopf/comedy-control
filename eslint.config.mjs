@@ -22,6 +22,7 @@ export default [
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/ban-ts-comment': 'off', // Allow @ts-ignore comments
       '@typescript-eslint/no-floating-promises': 'error', // Ensure promises are handled
+      '@typescript-eslint/no-explicit-any': 'off', // Allow any type for flexibility
     },
   },
   {

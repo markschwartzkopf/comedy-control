@@ -6,5 +6,5 @@ if (code) {
 } else {
   window.opener.postMessage({ type: 'error', error: 'No code received' }, '*');
 }
-
+console.log(params)
 window.close();

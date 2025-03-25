@@ -1,8 +1,9 @@
 import dgram from 'dgram';
-import { getSettings } from './settings';
+import { util } from './main';
+
 
 const GOVEE_PORT = 4003;
-const testGoveeIp = getSettings().govees.test;
+const testGoveeIp = util.getSettings().govees.test;
 const goveeSockets: { [k: string]: dgram.Socket } = {};
 
 export function connectGovees() {

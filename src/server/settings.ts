@@ -1,10 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 
-import { DeepPartial, Settings } from '../global-types';
+import {
+  DeepPartial,
+  RundownItem,
+  RundownItemComicSet,
+  Settings,
+} from '../global-types';
 import { sendServerMessage } from './http-server';
 import { log } from './logger';
 import { util } from './main';
+import { hasPropertyWithType } from './utils';
 
 let settings: Settings = {
   musicChannel: 15,
@@ -18,24 +24,31 @@ let settings: Settings = {
       type: 'comic',
       name: 'Hosty Hosterson',
       social: '@hosterson_with_the_mosterson',
-      bumperTitle: 'Buddy Holly',
-      bumperId: 'spotify_id_buddy_holly',
+      bumper: {
+        id: 'spotify_id_buddy_holly',
+        name: 'Buddy Holly',
+        artist: 'Weezer',
+        art: '',
+      },
       time: 5,
     },
     {
       type: 'comic',
       name: 'Funny McFunnyFace',
       social: '@funny_face',
-      bumperTitle: 'Boo Thang',
-      bumperId: 'spotify_id_boo_thang',
+      bumper: {
+        id: 'spotify_id_boo_thang',
+        name: 'Boo Thang',
+        artist: 'DJ Khaled',
+        art: '',
+      },
       time: 15,
     },
     {
       type: 'comic',
       name: 'Big Chungus',
       social: '@big_chungus',
-      bumperTitle: null,
-      bumperId: null,
+      bumper: null,
       time: 45,
     },
     {
@@ -51,7 +64,12 @@ let settings: Settings = {
     refreshToken: null,
     accessToken: null,
     tokenExpiration: null,
-    redirectUri: ''
+    redirectUri: '',
+    defaultPlaylist: null,
+    user: {
+      id: null,
+      name: null,
+    },
   },
 };
 const settingsFile = path.join(__dirname, '..', '..', 'settings.json');
@@ -64,9 +82,15 @@ export function initializeData() {
       return new Promise<void>((resolve, reject) => {
         try {
           const newSettings = JSON.parse(data.toString());
-          setSettings(newSettings);
-          resolve();
+          if (isPartialSettings(newSettings)) {
+            setSettings(newSettings);
+            resolve();
+          } else {
+            log('error', 'Bad settings file format');
+            reject(`Bad settings file format`);
+          }
         } catch (err) {
+          log('error', 'Error parsing settings file');
           reject(err);
         }
       });
@@ -101,7 +125,7 @@ function setSettings(newSettings: DeepPartial<Settings>) {
 util.setSettings = setSettings;
 util.getSettings = getSettings;
 
-function updateObjectWithPartial<T>(original: T, partial: DeepPartial<T>): T {
+function updateObjectWithPartial<T>(original: T, partial: DeepPartial<T>) {
   Object.entries(partial).forEach(([key, value]) => {
     const typedKey = key as keyof T;
     const originalValue = original[typedKey];
@@ -112,7 +136,12 @@ function updateObjectWithPartial<T>(original: T, partial: DeepPartial<T>): T {
         typedValue !== null &&
         !(typedValue instanceof Array)
       ) {
-        updateObjectWithPartial(original[typedKey], typedValue);
+        if (
+          originalValue === undefined ||
+          (originalValue === null && typedValue)
+        ) {
+          original[typedKey] = typedValue;
+        } else updateObjectWithPartial(original[typedKey], typedValue);
       } else {
         if (
           typedValue instanceof Array &&
@@ -124,8 +153,6 @@ function updateObjectWithPartial<T>(original: T, partial: DeepPartial<T>): T {
       }
     }
   });
-
-  return original;
 }
 
 function updateArrayWithPartial<T>(original: T[], partial: DeepPartial<T>[]) {
@@ -150,6 +177,10 @@ fs.promises
     try {
       const parsedData = JSON.parse(data);
       if (
+        typeof parsedData !== 'object' ||
+        parsedData === null ||
+        !('id' in parsedData) ||
+        !('secret' in parsedData) ||
         typeof parsedData.id !== 'string' ||
         typeof parsedData.secret !== 'string'
       ) {
@@ -171,3 +202,101 @@ fs.promises
   .catch((err) => {
     log('error', err);
   });
+
+export function isPartialSettings(input: unknown): input is Partial<Settings> {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    hasPropertyWithType(input, 'musicChannel', ['number', 'partial']) &&
+    hasPropertyWithType(input, 'xairAddress', ['string', 'partial']) &&
+    hasPropertyWithType(input, 'currentRundownItem', ['number', 'partial']) &&
+    (!('rundown' in input) ||
+      ('rundown' in input &&
+        Array.isArray(input.rundown) &&
+        input.rundown.every(isPartialRundownItem))) &&
+    (!('govees' in input) || ('govees' in input && isGovees(input.govees))) &&
+    (!('spotify' in input) ||
+      ('spotify' in input && isPartialSpotify(input.spotify)))
+  );
+}
+
+function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    'type' in input &&
+    'name' in input &&
+    typeof input.type === 'string' &&
+    typeof input.name === 'string' &&
+    ((input.type === 'preset' &&
+      hasPropertyWithType(input, 'endTime', ['number', 'partial'])) ||
+      (input.type === 'comic' &&
+        hasPropertyWithType(input, 'social', ['string', 'null', 'partial']) &&
+        (!('bumper' in input) ||
+          ('bumper' in input && isBumper(input.bumper))) &&
+        hasPropertyWithType(input, 'bumperId', ['string', 'null', 'partial']) &&
+        hasPropertyWithType(input, 'time', ['number', 'partial'])))
+  );
+}
+
+function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {
+  return (
+    typeof input === 'object' &&
+    (input === null ||
+      (hasPropertyWithType(input, 'id', ['string']) &&
+        hasPropertyWithType(input, 'name', ['string']) &&
+        hasPropertyWithType(input, 'artist', ['string']) &&
+        hasPropertyWithType(input, 'art', ['string'])))
+  );
+}
+
+function isGovees(input: unknown): input is Settings['govees'] {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    Object.values(input).every((value) => typeof value === 'string')
+  );
+}
+
+function isPartialSpotifyUser(
+  input: unknown
+): input is Partial<Settings['spotify']['user']> {
+  const rtn =
+    typeof input === 'object' &&
+    input !== null &&
+    hasPropertyWithType(input, 'id', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'name', ['string', 'null', 'partial']);
+  if (!rtn) {
+    log('error', 'Invalid Spotify user data');
+  }
+  return rtn;
+}
+
+function isPartialSpotify(
+  input: unknown
+): input is Partial<Settings['spotify']> {
+  const rtn =
+    typeof input === 'object' &&
+    input !== null &&
+    hasPropertyWithType(input, 'clientId', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'clientSecret', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'refreshToken', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'accessToken', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'tokenExpiration', [
+      'number',
+      'null',
+      'partial',
+    ]) &&
+    hasPropertyWithType(input, 'redirectUri', ['string', 'partial']) &&
+    hasPropertyWithType(input, 'defaultPlaylist', [
+      'string',
+      'null',
+      'partial',
+    ]) &&
+    (!('user' in input) ||
+      ('user' in input && isPartialSpotifyUser(input.user)));
+  if (!rtn) {
+    log('error', 'Invalid Spotify data');
+  }
+  return rtn;
+}

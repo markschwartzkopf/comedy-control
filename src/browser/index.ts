@@ -1,4 +1,8 @@
-import { RundownItem, RundownItemComicSet } from '../global-types';
+import {
+  RundownItem,
+  RundownItemComicSet,
+  SpotifyTrack,
+} from '../global-types';
 import {
   ClientMessage,
   LogData,
@@ -7,15 +11,22 @@ import {
   ServerMessage,
 } from '../global-types';
 
+let handleTracks: ((tracks: SpotifyTrack[]) => void) | null = null;
 const faderInput = document.getElementById('fader-input') as HTMLInputElement;
 faderInput.oninput = throttle(() => {
   console.log('Fader input changed:', faderInput.value);
   sendMessage({ type: 'f', l: parseFloat(faderInput.value) });
 }, 100);
 
+const warningsDiv = document.getElementById('warnings') as HTMLDivElement;
+const spotifyWarning = document.createElement('a');
+spotifyWarning.href = 'settings.html';
+spotifyWarning.target = '_blank';
+spotifyWarning.textContent = 'Spotify not connected';
 
 let localRundown: Rundown = [];
 let localCurrentItem = 0;
+let spotifyConnected = false;
 
 let populateItemModal: () => void = () => {};
 
@@ -48,7 +59,7 @@ function connect() {
   socket.onmessage = (event) => {
     if (typeof event.data === 'string') {
       try {
-        const message: ServerMessage = JSON.parse(event.data);
+        const message = JSON.parse(event.data) as ServerMessage;
         switch (message.type) {
           case 'm': {
             const height = Math.round((1 - Math.pow(message.l, 0.24)) * 100);
@@ -61,9 +72,26 @@ function connect() {
           }
           case 'settings': {
             localRundown = message.settings.rundown;
-            localCurrentItem = message.settings.currentRundownItem;            
+            localCurrentItem = message.settings.currentRundownItem;
+            spotifyConnected = Boolean(message.settings.spotify.accessToken);
             populateRundown();
             populateItemModal();
+            if (spotifyConnected) {
+              if (warningsDiv.contains(spotifyWarning)) {
+                warningsDiv.removeChild(spotifyWarning);
+              }
+            } else {
+              if (!warningsDiv.contains(spotifyWarning)) {
+                warningsDiv.appendChild(spotifyWarning);
+              }
+            }
+            break;
+          }
+          case 'spotify-tracks': {
+            if (handleTracks) handleTracks(message.tracks);
+            break;
+          }
+          case 'spotify-playlists': {
             break;
           }
           default:
@@ -99,16 +127,13 @@ function populateRundown() {
       socialEl.classList.add('social');
       socialEl.textContent = item.social;
       itemEl.appendChild(socialEl);
+      if (item.bumper && spotifyConnected) {
+        itemEl.appendChild(createTrackDiv(item.bumper));
+      }
       const timeEl = document.createElement('div');
       timeEl.classList.add('time');
       timeEl.textContent = minutesToTime(item.time);
       itemEl.appendChild(timeEl);
-      if (item.bumperId && item.bumperTitle) {
-        const bumperEl = document.createElement('div');
-        bumperEl.classList.add('bumper');
-        bumperEl.textContent = item.bumperTitle;
-        itemEl.appendChild(bumperEl);
-      }
     } else {
       const nameEl = document.createElement('div');
       nameEl.classList.add('name');
@@ -146,7 +171,7 @@ function populateRundown() {
   switch (currentRundownItem.type) {
     case 'comic': {
       buttonsEl.innerHTML = '';
-      if (currentRundownItem.bumperId) {
+      if (currentRundownItem.bumper) {
         const bumperPLayEl = document.createElement('button');
         bumperPLayEl.textContent = 'Play Bumper';
         buttonsEl.appendChild(bumperPLayEl);
@@ -194,7 +219,7 @@ function initItemEditModal(
     newRundown[itemno] = workingItem;
     sendMessage({ type: 'settings', settings: { rundown: newRundown } });
     hideModal();
-  }
+  };
   modalSaveButton.style.display = 'none';
   switch (workingItem.type) {
     case 'comic': {
@@ -205,9 +230,10 @@ function initItemEditModal(
       nameEl.type = 'text';
       nameEl.oninput = () => {
         comicItem.name = nameEl.value;
+        workingItem = comicItem;
         setSaveButtonState();
         console.log('Name changed:', nameEl.value);
-      }
+      };
       nameDiv.appendChild(nameEl);
       modal.appendChild(nameDiv);
       const socialDiv = document.createElement('div');
@@ -216,20 +242,30 @@ function initItemEditModal(
       socialEl.type = 'text';
       socialEl.oninput = () => {
         comicItem.social = socialEl.value;
+        workingItem = comicItem;
         setSaveButtonState();
         console.log('Social changed:', socialEl.value);
-      }
+      };
       socialDiv.appendChild(socialEl);
       modal.appendChild(socialDiv);
+      const bumperDiv = document.createElement('div');
+      bumperDiv.textContent = 'Bumper:';
+      const pickBumper = document.createElement('button');
+      pickBumper.textContent = 'Pick Bumper';
+      pickBumper.onclick = () => {
+        initBumperPickModal(rundown, currentItem, itemno);
+      };
+      bumperDiv.appendChild(pickBumper);
+      modal.appendChild(bumperDiv);
       const timeDiv = document.createElement('div');
       timeDiv.textContent = 'Minutes:';
       const timeEl = document.createElement('input');
       timeEl.type = 'number';
       timeEl.oninput = () => {
         comicItem.time = parseFloat(timeEl.value);
+        workingItem = comicItem;
         setSaveButtonState();
-        console.log('Time changed:', timeEl.value);
-      }
+      };
       timeDiv.appendChild(timeEl);
       modal.appendChild(timeDiv);
       populateItemModal = () => {
@@ -238,10 +274,11 @@ function initItemEditModal(
           hideModal();
           return;
         }
-        console.log('change')
-        comicItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItemComicSet;
+        comicItem = JSON.parse(
+          JSON.stringify(rundown[itemno])
+        ) as RundownItemComicSet;
         nameEl.value = item.name;
-        socialEl.value = item.social;
+        socialEl.value = item.social || '';
         timeEl.value = item.time.toString();
       };
       break;
@@ -264,12 +301,89 @@ function initItemEditModal(
   populateItemModal();
 }
 
+function initBumperPickModal(
+  rundown: Rundown,
+  currentItem: number,
+  itemno: number
+) {
+  const modal = displayModal();
+  modalCancelButton.onclick = () => {
+    const modal = displayModal();
+    initItemEditModal(rundown, currentItem, itemno, modal);
+  };
+  const trackListDiv = document.createElement('div');
+  modal.appendChild(trackListDiv);
+  handleTracks = (tracks: SpotifyTrack[]) => {
+    if (!modal.contains(trackListDiv)) {
+      console.log('Song select modal no longer active, resetting handleTracks');
+      handleTracks = null;
+      return;
+    }
+    trackListDiv.innerHTML = '';
+    tracks.forEach((track) => {
+      const trackDiv = createTrackDiv(track);
+      trackDiv.onclick = () => {
+        const item = localRundown[itemno];
+        hideModal();
+        if (item.type !== 'comic') {
+          console.error('Item is not a comic, cannot set bumper');
+          return;
+        }
+        item.bumper = {
+          id: track.id,
+          name: track.name,
+          artist: track.artist,
+          art: track.art,
+        };
+        sendMessage({
+          type: 'settings',
+          settings: { rundown: localRundown },
+        });
+      };
+      trackListDiv.appendChild(trackDiv);
+    });
+  };
+  sendMessage({ type: 'spotify-search' });
+}
+
+function createTrackDiv(track: {
+  id: string;
+  name: string;
+  artist: string;
+  album?: string;
+  duration_ms?: number;
+  popularity?: number;
+  art: string;
+}) {
+  const trackDiv = document.createElement('div');
+  trackDiv.classList.add('track');
+  const artEl = document.createElement('img');
+  artEl.classList.add('art');
+  artEl.src = track.art;
+  trackDiv.appendChild(artEl);
+  const infoSpan = document.createElement('span');
+  const nameEl = document.createElement('div');
+  nameEl.classList.add('name');
+  nameEl.textContent = track.name;
+  infoSpan.appendChild(nameEl);
+  const artistEl = document.createElement('div');
+  artistEl.classList.add('artist');
+  artistEl.textContent = track.artist;
+  infoSpan.appendChild(artistEl);
+  trackDiv.appendChild(infoSpan);
+  if (track.album && track.duration_ms && track.popularity)
+    trackDiv.title = `Album: ${track.album}\nDuration: ${msToTimeString(
+      track.duration_ms
+    )}\nPopularity: ${track.popularity}%`;
+  return trackDiv;
+}
+
 function sendMessage(message: ClientMessage) {
   if (socket && socket.readyState === WebSocket.OPEN) {
+    console.log('Sending message:', message);
     socket.send(JSON.stringify(message));
   } else console.error(`Socket not open, can't send message`);
 }
-
 let localLogNumber = 0;
 function log(type: LogType, description: string, data?: LogData) {
   localLogNumber++;
@@ -319,6 +433,7 @@ function displayModal() {
   modal.onclick = (e) => {
     if (e.target === modal) hideModal();
   };
+  modalCancelButton.onclick = hideModal;
   return modalContent;
 }
 
@@ -356,4 +471,11 @@ function setLongPress(element: HTMLElement, callback: () => void) {
       timer = null;
     }
   }
+}
+
+function msToTimeString(ms: number) {
+  let seconds = Math.round(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  seconds = seconds % 60;
+  return minutes.toString() + ':' + seconds.toString().padStart(2, '0');
 }

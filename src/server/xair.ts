@@ -1,7 +1,8 @@
 import dgram from 'dgram';
 import { log } from './logger';
 import { sendServerMessage } from './http-server';
-import { getSettings } from './settings';
+import { util } from './main';
+
 
 const MIXER_PORT = 10023; //10023 for X32, 10024 for XAir
 
@@ -20,14 +21,20 @@ type oscArgument =
   | { type: 'b'; data: Buffer };
 
 export function connectXair() {
+  const settings = util.getSettings();
+  if (!settings.xairAddress) {
+    log('error', `Can't connect mixer, no address set in settings`);
+    return;
+  }
+  const address = settings.xairAddress;
   mixerSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   const thisSocket = mixerSocket;
   thisSocket.bind(52361, '0.0.0.0', () => {
-    thisSocket.connect(MIXER_PORT, getSettings().xairAddress, () => {
+    thisSocket.connect(MIXER_PORT, address, () => {
       log('info', 'Connected to mixer');
       connected = true;
       subscribe();
-      requestFaderLevel(getSettings().musicChannel);
+      requestFaderLevel(util.getSettings().musicChannel || 0);
       thisSocket.on('message', (msg) => {
         let index = msg.indexOf(0x00);
         let command = msg.toString('utf-8', 0, index);
@@ -59,7 +66,7 @@ export function connectXair() {
                   console.log('Music Channel "On" boolean:' + Boolean(value));
                 }
                 break; */
-              case `ch/${getSettings().musicChannel
+              case `ch/${(util.getSettings().musicChannel || 0)
                 .toString()
                 .padStart(2, '0')}/mix/fader`:
                 if (oscFormat != 'f') {
@@ -149,7 +156,7 @@ function subscribe() {
     send('/xremote');
     const meterSubscribe: oscArgument[] = [
       { type: 's', data: '/meters/6' },
-      { type: 'i', data: getSettings().musicChannel - 1 },
+      { type: 'i', data: (util.getSettings().musicChannel || 0) - 1 },
       { type: 'i', data: 0 },
       { type: 'i', data: 1 },
     ];
@@ -225,7 +232,7 @@ export function setFaderLevel(channel: number, level: number) {
     send(`/ch/${channel.toString().padStart(2, '0')}/mix/fader`, [
       { type: 'f', data: level },
     ]);
-    if (channel == getSettings().musicChannel) {
+    if (channel == util.getSettings().musicChannel) {
       musicFaderLevel = level;
       sendServerMessage({
         type: 'f',

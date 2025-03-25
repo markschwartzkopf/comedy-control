@@ -13,9 +13,8 @@ export const util = {
 import { initializeData } from './settings.js';
 import { log } from './logger.js';
 import { DeepPartial, Settings } from '../global-types.js';
+import { initializeSpotify } from './spotify.js';
 
-
-//import { initializeSpotify } from './spotify.js';
 //import { connectXair } from './xair.js';
 //import { connectGovees } from './govee.js';
 
@@ -23,6 +22,9 @@ import { DeepPartial, Settings } from '../global-types.js';
 //connectXair();
 //connectGovees();
 initializeData()
+  .then(() => {
+    return initializeSpotify();
+  })
   .then(() => {
     return import('./http-server.js');
   })

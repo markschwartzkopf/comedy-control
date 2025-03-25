@@ -14,7 +14,9 @@ function genericLog(
   data?: LogData
 ) {
   logNumber++;
-  console[type](`${source} ${type} Log#:${logNumber}, "${description}"`);
+  const now = new Date();
+  const date = `${now.toLocaleTimeString()} ${now.toLocaleDateString()}`;
+  console[type](`${source} ${type} Log#:${logNumber}, Time: ${date}, "${description}"`);
   if (data)
     console[type](
       `${source} ${type} Log#:${logNumber} data: "${JSON.stringify(data)}"`

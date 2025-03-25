@@ -245,6 +245,36 @@
         outline: none;
         border-color: white;
       }
+      #warnings {
+        background-color: #ffcccb;
+        color: black;
+      }
+      .track {
+        height: 5vh;
+        display: flex;
+        flex-direction: row;
+        overflow: hidden;
+        width: 30vh;
+        margin: 0.5vh;
+      }
+      .art {
+        border-radius: 10%;
+        height: 100%;
+        margin-right: 0.5vh;
+      }
+      .track > span > *.name {
+        font-size: 80%;
+        font-weight: bold;
+        height: 50%;
+        line-height: 2.5vh;
+        white-space: nowrap;
+      }
+      .track > span > *.artist {
+        font-size: 80%;
+        line-height: 2.5vh;
+        height: 50%;
+        white-space: nowrap;
+      }
     </style>
   </head>
   <body>
@@ -295,6 +325,7 @@
           </svg>
         </a>
       </div>
+      <div id="warnings"></div>
     </div>
   </body>
   <script>
