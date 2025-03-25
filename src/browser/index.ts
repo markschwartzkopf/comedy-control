@@ -185,10 +185,8 @@ function initItemEditModal(
   function setSaveButtonState() {
     if (JSON.stringify(rundown[itemno]) !== JSON.stringify(workingItem)) {
       modalSaveButton.style.display = '';
-      console.log('Save button visible');
     } else {
       modalSaveButton.style.display = 'none';
-      console.log('Save button hidden');
     }
   }
   modalSaveButton.onclick = () => {
@@ -200,12 +198,13 @@ function initItemEditModal(
   modalSaveButton.style.display = 'none';
   switch (workingItem.type) {
     case 'comic': {
+      let comicItem = workingItem as RundownItemComicSet;
       const nameDiv = document.createElement('div');
       nameDiv.textContent = 'Name:';
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
       nameEl.oninput = () => {
-        workingItem.name = nameEl.value;
+        comicItem.name = nameEl.value;
         setSaveButtonState();
         console.log('Name changed:', nameEl.value);
       }
@@ -216,8 +215,7 @@ function initItemEditModal(
       const socialEl = document.createElement('input');
       socialEl.type = 'text';
       socialEl.oninput = () => {
-        if (workingItem.type !== 'comic') return;
-        workingItem.social = socialEl.value;
+        comicItem.social = socialEl.value;
         setSaveButtonState();
         console.log('Social changed:', socialEl.value);
       }
@@ -228,8 +226,7 @@ function initItemEditModal(
       const timeEl = document.createElement('input');
       timeEl.type = 'number';
       timeEl.oninput = () => {
-        if (workingItem.type !== 'comic') return;
-        workingItem.time = parseFloat(timeEl.value);
+        comicItem.time = parseFloat(timeEl.value);
         setSaveButtonState();
         console.log('Time changed:', timeEl.value);
       }
@@ -242,7 +239,7 @@ function initItemEditModal(
           return;
         }
         console.log('change')
-        workingItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItemComicSet;
+        comicItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItemComicSet;
         nameEl.value = item.name;
         socialEl.value = item.social;
         timeEl.value = item.time.toString();
