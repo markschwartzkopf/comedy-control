@@ -8,6 +8,9 @@ import {
 
 let settings: Settings | null = null;
 
+const timerAddress = document.getElementById(
+  'timer-address'
+) as HTMLInputElement;
 const xairAddress = document.getElementById('xair-address') as HTMLInputElement;
 const musicChannel = document.getElementById(
   'music-channel'
@@ -15,15 +18,10 @@ const musicChannel = document.getElementById(
 const defaultPlaylist = document.getElementById(
   'default-playlist'
 ) as HTMLInputElement;
-xairAddress.oninput = () => {
-  setButtons();
-};
-musicChannel.oninput = () => {
-  setButtons();
-};
-defaultPlaylist.oninput = () => {
-  setButtons();
-};
+timerAddress.oninput = setButtons;
+xairAddress.oninput = setButtons;
+musicChannel.oninput = setButtons;
+defaultPlaylist.oninput = setButtons;
 const buttons = document.getElementById('buttons') as HTMLDivElement;
 const saveButton = document.getElementById('save') as HTMLButtonElement;
 const resetButton = document.getElementById('reset') as HTMLButtonElement;
@@ -32,10 +30,11 @@ saveButton.onclick = () => {
   sendMessage({
     type: 'settings',
     settings: {
-      xairAddress: xairAddress.value,
-      musicChannel: parseInt(musicChannel.value),
+      timerAddress: timerAddress.value || null,
+      xairAddress: xairAddress.value || null,
+      musicChannel: musicChannel.value ? parseInt(musicChannel.value) : null,
       spotify: {
-        defaultPlaylist: defaultPlaylist.value,
+        defaultPlaylist: defaultPlaylist.value || null,
       },
     },
   });
@@ -143,6 +142,9 @@ function connect() {
           case 'm': {
             break;
           }
+          case 'timer': {
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
         }
@@ -191,6 +193,9 @@ function generateRandomString(length: number) {
 
 function setButtons() {
   let changed = false;
+  if (settings && timerAddress.value !== settings.timerAddress) {
+    changed = true;
+  }
   if (settings && xairAddress.value !== settings.xairAddress) {
     changed = true;
   }
@@ -208,6 +213,7 @@ function setButtons() {
 }
 
 function populateValues() {
+  timerAddress.value = settings ? settings.timerAddress || '' : '';
   xairAddress.value = settings ? settings.xairAddress || '' : '';
   musicChannel.value = settings ? settings.musicChannel?.toString() || '' : '';
   defaultPlaylist.value = settings

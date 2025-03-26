@@ -348,7 +348,6 @@ export function pauseTrack() {
         data += chunk;
       });
       res.on('end', () => {
-        console.log(data);
         if (res.statusCode === 200) {
           resolve();
         } else {

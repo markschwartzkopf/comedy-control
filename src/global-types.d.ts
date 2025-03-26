@@ -10,6 +10,7 @@ export type LogType = 'info' | 'error' | 'warn';
 export type Settings = {
   musicChannel: number | null;
   xairAddress: string | null;
+  timerAddress: string | null;
   rundown: Rundown;
   currentRundownItem: number;
   govees: { [k: string]: string };
@@ -53,12 +54,18 @@ type ServerMessageSpotifyPlaylists = {
   playlists: SpotifyPlaylist[];
 };
 
+type ServerMessageTimerState = {
+  type: 'timer';
+  state: 'finished' | 'ready' | 'paused' | number;
+};
+
 export type ServerMessage =
   | ServerMessageFader
   | ServerMessageMeter
   | ServerMessageSettings
   | ServerMessageSpotifyTracks
-  | ServerMessageSpotifyPlaylists;
+  | ServerMessageSpotifyPlaylists
+  | ServerMessageTimerState;
 
 type ClientMessageLog = {
   type: 'log';
@@ -95,11 +102,22 @@ type ClientMessageGetSpotifyPlaylists = {
 type ClientMessageSpotifyPlay = {
   type: 'spotify-play';
   id: string;
-}
+};
 
 type ClientMessageSpotifyPause = {
   type: 'spotify-pause';
-}
+};
+
+type ClientMessageTimerCommand =
+  | {
+      type: 'timer';
+      command: 'start' | 'pause' | 'reset';
+    }
+  | {
+      type: 'timer';
+      command: 'reset';
+      time: number;
+    };
 
 export type ClientMessage =
   | ClientMessageLog
@@ -109,7 +127,8 @@ export type ClientMessage =
   | ClientMessageSpotifySearch
   | ClientMessageGetSpotifyPlaylists
   | ClientMessageSpotifyPlay
-  | ClientMessageSpotifyPause;
+  | ClientMessageSpotifyPause
+  | ClientMessageTimerCommand;
 
 export type RundownItemComicSet = {
   type: 'comic';

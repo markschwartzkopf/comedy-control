@@ -13,8 +13,9 @@ import { util } from './main';
 import { hasPropertyWithType } from './utils';
 
 let settings: Settings = {
-  musicChannel: 15,
-  xairAddress: '172.19.1.102',
+  musicChannel: null,
+  xairAddress: null,
+  timerAddress: null,
   rundown: [
     {
       type: 'preset',
@@ -207,8 +208,9 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
   return (
     typeof input === 'object' &&
     input !== null &&
-    hasPropertyWithType(input, 'musicChannel', ['number', 'partial']) &&
-    hasPropertyWithType(input, 'xairAddress', ['string', 'partial']) &&
+    hasPropertyWithType(input, 'musicChannel', ['number', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'xairAddress', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'timerAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'currentRundownItem', ['number', 'partial']) &&
     (!('rundown' in input) ||
       ('rundown' in input &&

@@ -17,6 +17,8 @@ faderInput.oninput = throttle(() => {
   sendMessage({ type: 'f', l: parseFloat(faderInput.value) });
 }, 100);
 
+let activeTimeDiv: HTMLDivElement | null = null;
+
 const warningsDiv = document.getElementById('warnings') as HTMLDivElement;
 const spotifyWarning = document.createElement('a');
 spotifyWarning.href = 'settings.html';
@@ -26,6 +28,8 @@ spotifyWarning.textContent = 'Spotify not connected';
 let localRundown: Rundown = [];
 let localCurrentItem = 0;
 let spotifyConnected = false;
+let timerState: 'finished' | 'ready' | 'paused' | 'running' = 'ready';
+let lastTimerTime: string | null = null;
 
 let populateItemModal: () => void = () => {};
 
@@ -93,6 +97,26 @@ function connect() {
           case 'spotify-playlists': {
             break;
           }
+          case 'timer': {
+            if (typeof message.state === 'number') {
+              let seconds = message.state;
+              const minutes = Math.floor(seconds / 60);
+              seconds -= minutes * 60;
+              const timeString =
+                minutes.toString() + ':' + seconds.toString().padStart(2, '0');
+              if (activeTimeDiv) {
+                activeTimeDiv.textContent = timeString;
+                lastTimerTime = timeString;
+              }
+            }
+            const newTimerState =
+              typeof message.state === 'number' ? 'running' : message.state;
+            if (newTimerState !== timerState) {
+              timerState = newTimerState;
+              populateRundown();
+            }
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
         }
@@ -112,12 +136,14 @@ setInterval(() => {
 
 function populateRundown() {
   rundownEl.innerHTML = '';
+  activeTimeDiv = null;
   for (let i = 0; i < localRundown.length; i++) {
     const item = localRundown[i];
     const itemEl = document.createElement('div');
     itemEl.classList.add('rundown-item');
     if (i === localCurrentItem) itemEl.classList.add('current');
     if (item.type === 'comic') {
+      const isActive = i === localCurrentItem;
       const nameEl = document.createElement('div');
       nameEl.classList.add('name');
       nameEl.textContent = item.name;
@@ -129,8 +155,13 @@ function populateRundown() {
       itemEl.appendChild(createTrackDiv(item.bumper));
       const timeEl = document.createElement('div');
       timeEl.classList.add('time');
-      timeEl.textContent = minutesToTime(item.time);
+      let timeString = minutesToTime(item.time);
+      if (timerState !== 'ready' && isActive) {
+        timeString = lastTimerTime || timeString;
+      }
+      timeEl.textContent = timeString;
       itemEl.appendChild(timeEl);
+      if (isActive) activeTimeDiv = timeEl;
     } else {
       const nameEl = document.createElement('div');
       nameEl.classList.add('name');
@@ -148,6 +179,13 @@ function populateRundown() {
       makeActiveButton.textContent = `Make "${item.name}" Active Rundown Item`;
       makeActiveButton.onclick = () => {
         sendMessage({ type: 'settings', settings: { currentRundownItem: i } });
+        if (item.type === 'comic') {
+          sendMessage({
+            type: 'timer',
+            command: 'reset',
+            time: item.time,
+          });
+        }
         if (makeActiveButton) {
           makeActiveButton.parentElement?.removeChild(makeActiveButton);
           makeActiveButton = null;
@@ -186,9 +224,50 @@ function populateRundown() {
         sendMessage({ type: 'spotify-pause' });
       };
       buttonsEl.appendChild(bumperStopEl);
-      const timerStartEl = document.createElement('button');
-      timerStartEl.textContent = 'Start Timer';
-      buttonsEl.appendChild(timerStartEl);
+      switch (timerState) {
+        case 'ready': {
+          const timerStartEl = document.createElement('button');
+          timerStartEl.textContent = 'Start Timer';
+          timerStartEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'start' });
+          };
+          buttonsEl.appendChild(timerStartEl);
+          break;
+        }
+        case 'running': {
+          const timerStopEl = document.createElement('button');
+          timerStopEl.textContent = 'Pause Timer';
+          timerStopEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'pause' });
+          };
+          buttonsEl.appendChild(timerStopEl);
+          break;
+        }
+        case 'paused': {
+          const timerResumeEl = document.createElement('button');
+          timerResumeEl.textContent = 'Resume Timer';
+          timerResumeEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'start' });
+          };
+          buttonsEl.appendChild(timerResumeEl);
+          const timerResetEl = document.createElement('button');
+          timerResetEl.textContent = 'Reset Timer';
+          timerResetEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'reset' });
+          };
+          buttonsEl.appendChild(timerResetEl);
+          break;
+        }
+        case 'finished': {
+          const timerResetEl = document.createElement('button');
+          timerResetEl.textContent = 'Reset Timer';
+          timerResetEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'reset' });
+          };
+          buttonsEl.appendChild(timerResetEl);
+          break;
+        }
+      }
       break;
     }
     case 'preset': {
@@ -204,9 +283,17 @@ function populateRundown() {
     const nextEl = document.createElement('button');
     nextEl.textContent = 'Go to Next';
     nextEl.onclick = () => {
-      if (localCurrentItem >= localRundown.length - 1) {
+      const nextItem = localRundown[localCurrentItem + 1];
+      if (!nextItem) {
         log('error', 'Clicked next button that should not exist');
         return;
+      }
+      if (nextItem.type === 'comic') {
+        sendMessage({
+          type: 'timer',
+          command: 'reset',
+          time: nextItem.time,
+        });
       }
       sendMessage({
         type: 'settings',
@@ -377,7 +464,7 @@ function initBumperPickModal(
         sendMessage({
           type: 'spotify-search',
           query: searchEl.value,
-        });      
+        });
     }
   };
   searchDiv.appendChild(searchEl);

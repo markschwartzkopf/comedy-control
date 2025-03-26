@@ -28,6 +28,8 @@ initializeData()
   })
   .then(() => {
     return import('./http-server.js');
+  }).then(() => {
+    return import('./timer.js');
   })
   .catch((err) => {
     log('error', `Error in initialization: ${err}`);

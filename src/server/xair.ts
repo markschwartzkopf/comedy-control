@@ -3,7 +3,6 @@ import { log } from './logger';
 import { sendServerMessage } from './http-server';
 import { util } from './main';
 
-
 const MIXER_PORT = 10023; //10023 for X32, 10024 for XAir
 
 let connected = false;
@@ -172,7 +171,7 @@ function send(cmd: string, args?: oscArgument[]) {
   const argBufs: Buffer[] = [];
   if (args.length > 0) {
     for (let i = 0; i < args.length; i++) {
-      argTypes += args[i].type;
+      argTypes += args[i].type[0];
       argBufs.push(oscArgumentToBuffer(args[i]));
     }
   }
@@ -200,18 +199,16 @@ function oscArgumentToBuffer(arg: oscArgument): Buffer {
       intBuf.writeInt32BE(arg.data, 0);
       return intBuf;
     }
-    case 's':
-      return strToBuf(arg.data);
+    case 's': {
+      const unpaddedBuf = Buffer.from(arg.data);
+      let newBufLength = unpaddedBuf.length + 1;
+      while (newBufLength % 4 !== 0) newBufLength++;
+      const paddedBuf = Buffer.alloc(newBufLength);
+      paddedBuf.write(arg.data);
+      return paddedBuf;
+    }
   }
 }
-
-/* function send(msg: Buffer) {
-  if (mixerSocket && connected) {
-    mixerSocket.send(msg, (err) => {
-      if (err) console.error(err);
-    });
-  } else console.error("Can't send data to mixer unless connected");
-} */
 
 function strToBuf(str: string): Buffer {
   let buf = Buffer.from(str);

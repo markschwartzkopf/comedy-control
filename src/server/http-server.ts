@@ -14,6 +14,7 @@ import {
   searchForTrack,
 } from './spotify';
 import { util } from './main';
+import { getTimerState, sendTimerCommand } from './timer';
 
 const PORT = 9999;
 
@@ -112,7 +113,13 @@ const httpServer = http
         },
         ws
       );
-
+      sendServerMessage(
+        {
+          type: 'timer',
+          state: getTimerState(),
+        },
+        ws
+      );
       ws.on('message', (message) => {
         try {
           const msg = JSON.parse(message.toString()) as ClientMessage;
@@ -183,6 +190,12 @@ const httpServer = http
               pauseTrack().catch((err) => {
                 log('error', `Error pausing track: ${err}`);
               });
+              break;
+            }
+            case 'timer': {
+              if (msg.command === 'reset' && 'time' in msg) {
+                sendTimerCommand(msg.command, msg.time);
+              } else sendTimerCommand(msg.command);
               break;
             }
             default:
