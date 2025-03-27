@@ -3,7 +3,7 @@ import { log } from './logger';
 import { sendServerMessage } from './http-server';
 import { util } from './main';
 
-const MIXER_PORT = 10023; //10023 for X32, 10024 for XAir
+const MIXER_PORT = 10024; //10023 for X32, 10024 for XAir
 
 let connected = false;
 let mixerSocket: dgram.Socket | null = null;
@@ -25,9 +25,13 @@ export function connectXair() {
     log('error', `Can't connect mixer, no address set in settings`);
     return;
   }
+  if (mixerSocket) {
+    mixerSocket.close();
+    connected = false;
+  }
   const address = settings.xairAddress;
-  mixerSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-  const thisSocket = mixerSocket;
+  const thisSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  mixerSocket = thisSocket;
   thisSocket.bind(52361, '0.0.0.0', () => {
     thisSocket.connect(MIXER_PORT, address, () => {
       log('info', 'Connected to mixer');
@@ -80,16 +84,19 @@ export function connectXair() {
                   });
                 }
                 break;
-              case 'meters/6': {
+              case 'meters/0': {
                 if (oscFormat != 'b') {
                   log('error', 'Invalid meter info from mixer');
                 }
-                msg2 = msg2.subarray(8); //length of blob in bytes Int32BE, number of floats Int32LE
-                const meterFloat = msg2.readFloatLE(0); //pre-fader meter. Offset 12 is location of post-fader meter float
-                //const db = Math.log(meterFloat) * 8.63; //8.62859090876;
+                //console.log(msg);
+                //msg2 0-4: length of blob in bytes, 5-8 Int32BE, number of Int16s Int32LE                
+                const leftMeter = msg2.readInt16LE(8) / 32767;
+                const rightMeter = msg2.readInt16LE(10) / 32767;
+                const monoMeter =
+                  Math.round(((leftMeter + rightMeter) / 2) * 1000) / 1000;
                 sendServerMessage({
                   type: 'm',
-                  l: Math.round(meterFloat * 1000) / 1000,
+                  l: monoMeter,
                 });
                 break;
               }
@@ -154,10 +161,8 @@ function subscribe() {
   if (connected && mixerSocket) {
     send('/xremote');
     const meterSubscribe: oscArgument[] = [
-      { type: 's', data: '/meters/6' },
+      { type: 's', data: '/meters/0' },
       { type: 'i', data: (util.getSettings().musicChannel || 0) - 1 },
-      { type: 'i', data: 0 },
-      { type: 'i', data: 1 },
     ];
     send('/meters', meterSubscribe);
   }

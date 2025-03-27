@@ -1,3 +1,4 @@
-Timer integration
-Change meter subscription to work for Xair
-Fader db markers
+add, remove, reorder items
+Pignage integration
+Special timer control when editing current comic
+Pignage updates on active comic

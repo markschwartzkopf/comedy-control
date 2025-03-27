@@ -1,6 +1,3 @@
-//import fs from 'fs';
-//import path from 'path';
-
 export const util = {
   // These will be replaced by settings.ts
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -15,13 +12,8 @@ import { initializeData } from './settings.js';
 import { log } from './logger.js';
 import { DeepPartial, Settings } from '../global-types.js';
 import { initializeSpotify } from './spotify.js';
+import { connectXair } from './xair.js';
 
-//import { connectXair } from './xair.js';
-//import { connectGovees } from './govee.js';
-
-//temp
-//connectXair();
-//connectGovees();
 initializeData()
   .then(() => {
     return initializeSpotify();
@@ -30,6 +22,8 @@ initializeData()
     return import('./http-server.js');
   }).then(() => {
     return import('./timer.js');
+  }).then(() => {
+    connectXair();
   })
   .catch((err) => {
     log('error', `Error in initialization: ${err}`);

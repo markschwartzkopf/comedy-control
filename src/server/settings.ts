@@ -11,6 +11,7 @@ import { sendServerMessage } from './http-server';
 import { log } from './logger';
 import { util } from './main';
 import { hasPropertyWithType } from './utils';
+import { connectXair } from './xair';
 
 let settings: Settings = {
   musicChannel: null,
@@ -114,7 +115,12 @@ function getSettings() {
 }
 
 function setSettings(newSettings: DeepPartial<Settings>) {
+  const oldMixerAddress = settings.xairAddress;  
   updateObjectWithPartial(settings, newSettings);
+  if (oldMixerAddress !== settings.xairAddress) {
+    log('info', `Xair address changed to ${newSettings.xairAddress}`);
+    connectXair();
+  }
   saveSettings().catch((err) => {
     log('error', `Error saving settings: ${err}`);
   });

@@ -65,7 +65,9 @@ function connect() {
         const message = JSON.parse(event.data) as ServerMessage;
         switch (message.type) {
           case 'm': {
-            const height = Math.round((1 - Math.pow(message.l, 0.24)) * 100);
+            const height = Math.round(
+              (1 - Math.pow(message.l + 1, 3.5)) * 100
+            );
             document.getElementById('vu-level')!.style.height = `${height}%`;
             break;
           }

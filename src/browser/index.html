@@ -95,8 +95,6 @@
         height: 100%;
       }
       #fader {
-        display: flex;
-        flex-direction: column;
         flex-grow: 0;
         flex-shrink: 0;
         margin-right: 0.5rem;
@@ -300,6 +298,17 @@
       <div id="main">
         <div id="rundown"></div>
         <div id="fader" class="fader-container">
+          <div class="fader-labels">
+            <div class="fader-label" style="top: 0%">10&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 12.5%">5&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 25%">0&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 37.5%">-5&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 50%">-10&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 62.5%">-20&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 75%">-30&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 87.5%">-50&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 100%">-&infin;&mdash;&mdash;</div>
+          </div>
           <input
             type="range"
             id="fader-input"
