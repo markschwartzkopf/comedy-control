@@ -10,6 +10,10 @@ import {
   Rundown,
   ServerMessage,
 } from '../global-types';
+const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
+const trashSvg = `<path d="M21.36 2.16a.96.96 0 0 1 .96.96v.48H1.68v-.48a.96.96 0 0 1 .96-.96zM9.84 2.16V.96a.24.24 0 0 1 .24-.24h3.84a.24.24 0 0 1 .24.24v1.2"/><path fill="none" d="M17.82 22.68a1.44 1.44 0 0 0 1.43-1.24L21.6 4.68H2.4l2.35 16.76a1.44 1.44 0 0 0 1.43 1.24z"/><path stroke-linecap="round" d="M12 7.2v12.96M7.2 7.2l.96 12.96M16.8 7.2l-.96 12.96"/>`;
+const upSvg = `<polygon points="12 0 24 24 0 24"/>`;
+const downSvg = `<polygon points="12 24 24 0 0 0"/>`;
 
 let handleTracks: ((tracks: SpotifyTrack[]) => void) | null = null;
 const faderInput = document.getElementById('fader-input') as HTMLInputElement;
@@ -30,8 +34,12 @@ let localCurrentItem = 0;
 let spotifyConnected = false;
 let timerState: 'finished' | 'ready' | 'paused' | 'running' = 'ready';
 let lastTimerTime: string | null = null;
-
-let populateItemModal: () => void = () => {};
+let editMode = false;
+const editToggle = document.getElementById('edit-toggle') as HTMLInputElement;
+editToggle.onclick = () => {
+  editMode = editToggle.checked;
+  populateRundown();
+};
 
 let makeActiveButton: HTMLButtonElement | null = null;
 const rundownEl = document.getElementById('rundown') as HTMLDivElement;
@@ -65,9 +73,7 @@ function connect() {
         const message = JSON.parse(event.data) as ServerMessage;
         switch (message.type) {
           case 'm': {
-            const height = Math.round(
-              (1 - Math.pow(message.l + 1, 3.5)) * 100
-            );
+            const height = Math.round((1 - Math.pow(message.l + 1, 3.5)) * 100);
             document.getElementById('vu-level')!.style.height = `${height}%`;
             break;
           }
@@ -80,7 +86,6 @@ function connect() {
             localCurrentItem = message.settings.currentRundownItem;
             spotifyConnected = Boolean(message.settings.spotify.accessToken);
             populateRundown();
-            populateItemModal();
             if (spotifyConnected) {
               if (warningsDiv.contains(spotifyWarning)) {
                 warningsDiv.removeChild(spotifyWarning);
@@ -144,17 +149,17 @@ function populateRundown() {
     const itemEl = document.createElement('div');
     itemEl.classList.add('rundown-item');
     if (i === localCurrentItem) itemEl.classList.add('current');
-    if (item.type === 'comic') {
-      const isActive = i === localCurrentItem;
-      const nameEl = document.createElement('div');
-      nameEl.classList.add('name');
-      nameEl.textContent = item.name;
-      itemEl.appendChild(nameEl);
+    const isActive = i === localCurrentItem;
+    const nameEl = document.createElement('div');
+    nameEl.classList.add('name');
+    nameEl.textContent = item.name;
+    itemEl.appendChild(nameEl);
+    if (item.type === 'comic' && !editMode) {
       const socialEl = document.createElement('div');
       socialEl.classList.add('social');
       socialEl.textContent = item.social;
       itemEl.appendChild(socialEl);
-      itemEl.appendChild(createTrackDiv(item.bumper));
+      if (spotifyConnected) itemEl.appendChild(createTrackDiv(item.bumper));
       const timeEl = document.createElement('div');
       timeEl.classList.add('time');
       let timeString = minutesToTime(item.time);
@@ -164,13 +169,88 @@ function populateRundown() {
       timeEl.textContent = timeString;
       itemEl.appendChild(timeEl);
       if (isActive) activeTimeDiv = timeEl;
-    } else {
-      const nameEl = document.createElement('div');
-      nameEl.classList.add('name');
-      nameEl.textContent = item.name;
-      itemEl.appendChild(nameEl);
+    }
+    if (editMode) {
+      const trashIcon = document.createElementNS(svgNS, 'svg');
+      trashIcon.classList.add('svg-icon');
+      trashIcon.setAttribute('viewBox', '0 0 24 24');
+      trashIcon.setAttribute('fill', 'gray');
+      trashIcon.setAttribute('stroke', 'gray');
+      trashIcon.setAttribute('stroke-width', '0.8');
+      trashIcon.innerHTML = trashSvg;
+      trashIcon.onclick = (e) => {
+        e.stopPropagation();
+        const newCurrentRundownItem =
+          localCurrentItem <= i ? localCurrentItem : localCurrentItem - 1;
+        const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
+        newRundown.splice(i, 1);
+        sendMessage({
+          type: 'settings',
+          settings: {
+            rundown: newRundown,
+            currentRundownItem: newCurrentRundownItem,
+          },
+        });
+      };
+      itemEl.appendChild(trashIcon);
+      const upIcon = document.createElementNS(svgNS, 'svg');
+      upIcon.classList.add('svg-icon');
+      if (i === 0) upIcon.classList.add('disabled');
+      upIcon.setAttribute('viewBox', '0 0 24 24');
+      upIcon.setAttribute('fill', 'gray');
+      upIcon.innerHTML = upSvg;
+      upIcon.onclick = (e) => {
+        e.stopPropagation();
+        const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
+        const newCurrentRundownItem =
+          localCurrentItem === i - 1
+            ? localCurrentItem + 1
+            : localCurrentItem === i
+            ? i - 1
+            : localCurrentItem;
+        const itemToMove = newRundown.splice(i, 1)[0];
+        newRundown.splice(i - 1, 0, itemToMove);
+        sendMessage({
+          type: 'settings',
+          settings: {
+            rundown: newRundown,
+            currentRundownItem: newCurrentRundownItem,
+          },
+        });
+      };
+      itemEl.appendChild(upIcon);
+      const downIcon = document.createElementNS(svgNS, 'svg');
+      downIcon.classList.add('svg-icon');
+      if (i === localRundown.length - 1) downIcon.classList.add('disabled');
+      downIcon.setAttribute('viewBox', '0 0 24 24');
+      downIcon.setAttribute('fill', 'gray');
+      downIcon.innerHTML = downSvg;
+      downIcon.onclick = (e) => {
+        e.stopPropagation();
+        const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
+        const newCurrentRundownItem =
+          localCurrentItem === i + 1
+            ? localCurrentItem - 1
+            : localCurrentItem === i
+            ? i + 1
+            : localCurrentItem;
+        const itemToMove = newRundown.splice(i, 1)[0];
+        newRundown.splice(i + 1, 0, itemToMove);
+        sendMessage({
+          type: 'settings',
+          settings: {
+            rundown: newRundown,
+            currentRundownItem: newCurrentRundownItem,
+          },
+        });
+      };
+      itemEl.appendChild(downIcon);
     }
     itemEl.onclick = () => {
+      if (editMode) {
+        editItem();
+        return;
+      }
       if (makeActiveButton) {
         makeActiveButton.parentElement?.removeChild(makeActiveButton);
         makeActiveButton = null;
@@ -197,7 +277,11 @@ function populateRundown() {
     };
     function editItem() {
       const modal = displayModal();
-      initItemEditModal(localRundown, localCurrentItem, i, modal);
+      initItemEditModal(item, modal, (item) => {
+        const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
+        newRundown[i] = item;
+        sendMessage({ type: 'settings', settings: { rundown: newRundown } });
+      });
     }
     itemEl.ondblclick = editItem;
     setLongPress(itemEl, editItem);
@@ -205,82 +289,122 @@ function populateRundown() {
   }
   const currentRundownItem = localRundown[localCurrentItem];
   const buttonsEl = document.getElementById('buttons') as HTMLDivElement;
-  switch (currentRundownItem.type) {
-    case 'comic': {
-      buttonsEl.innerHTML = '';
-      if (currentRundownItem.bumper) {
-        const trackId = currentRundownItem.bumper.id;
-        const bumperPLayEl = document.createElement('button');
-        bumperPLayEl.textContent = 'Play Bumper';
-        buttonsEl.appendChild(bumperPLayEl);
-        bumperPLayEl.onclick = () => {
-          sendMessage({
-            type: 'spotify-play',
-            id: trackId,
-          });
+  buttonsEl.innerHTML = '';
+  if (editMode) {
+    function editNewItem(item: RundownItem) {
+      const modal = displayModal();
+      initItemEditModal(
+        item,
+        modal,
+        (item) => {
+          const newRundown = JSON.parse(
+            JSON.stringify(localRundown)
+          ) as Rundown;
+          newRundown.push(item);
+          sendMessage({ type: 'settings', settings: { rundown: newRundown } });
+          hideModal();
+        }
+      );
+    }
+    const addItemEl = document.createElement('div');
+    const addComicButton = document.createElement('button');
+    addComicButton.textContent = 'Add Comic';
+    addComicButton.onclick = () => {      
+      editNewItem({
+        type: 'comic',
+        name: '',
+        social: null,
+        bumper: null,
+        time: 10,
+      });
+    };
+    addItemEl.appendChild(addComicButton);
+    const addPresetButton = document.createElement('button');
+    addPresetButton.id = 'add-item-button';
+    addPresetButton.textContent = 'Add Preset';
+    addPresetButton.onclick = () => {
+      editNewItem({
+        type: 'preset',
+        name: '',
+      });
+    };
+    addItemEl.appendChild(addPresetButton);
+    buttonsEl.appendChild(addItemEl);
+    return;
+  } else
+    switch (currentRundownItem.type) {
+      case 'comic': {
+        if (currentRundownItem.bumper) {
+          const trackId = currentRundownItem.bumper.id;
+          const bumperPLayEl = document.createElement('button');
+          bumperPLayEl.textContent = 'Play Bumper';
+          buttonsEl.appendChild(bumperPLayEl);
+          bumperPLayEl.onclick = () => {
+            sendMessage({
+              type: 'spotify-play',
+              id: trackId,
+            });
+          };
+        }
+        const bumperStopEl = document.createElement('button');
+        bumperStopEl.textContent = 'Stop Spotify';
+        bumperStopEl.onclick = () => {
+          sendMessage({ type: 'spotify-pause' });
         };
+        buttonsEl.appendChild(bumperStopEl);
+        switch (timerState) {
+          case 'ready': {
+            const timerStartEl = document.createElement('button');
+            timerStartEl.textContent = 'Start Timer';
+            timerStartEl.onclick = () => {
+              sendMessage({ type: 'timer', command: 'start' });
+            };
+            buttonsEl.appendChild(timerStartEl);
+            break;
+          }
+          case 'running': {
+            const timerStopEl = document.createElement('button');
+            timerStopEl.textContent = 'Pause Timer';
+            timerStopEl.onclick = () => {
+              sendMessage({ type: 'timer', command: 'pause' });
+            };
+            buttonsEl.appendChild(timerStopEl);
+            break;
+          }
+          case 'paused': {
+            const timerResumeEl = document.createElement('button');
+            timerResumeEl.textContent = 'Resume Timer';
+            timerResumeEl.onclick = () => {
+              sendMessage({ type: 'timer', command: 'start' });
+            };
+            buttonsEl.appendChild(timerResumeEl);
+            const timerResetEl = document.createElement('button');
+            timerResetEl.textContent = 'Reset Timer';
+            timerResetEl.onclick = () => {
+              sendMessage({ type: 'timer', command: 'reset' });
+            };
+            buttonsEl.appendChild(timerResetEl);
+            break;
+          }
+          case 'finished': {
+            const timerResetEl = document.createElement('button');
+            timerResetEl.textContent = 'Reset Timer';
+            timerResetEl.onclick = () => {
+              sendMessage({ type: 'timer', command: 'reset' });
+            };
+            buttonsEl.appendChild(timerResetEl);
+            break;
+          }
+        }
+        break;
       }
-      const bumperStopEl = document.createElement('button');
-      bumperStopEl.textContent = 'Stop Spotify';
-      bumperStopEl.onclick = () => {
-        sendMessage({ type: 'spotify-pause' });
-      };
-      buttonsEl.appendChild(bumperStopEl);
-      switch (timerState) {
-        case 'ready': {
-          const timerStartEl = document.createElement('button');
-          timerStartEl.textContent = 'Start Timer';
-          timerStartEl.onclick = () => {
-            sendMessage({ type: 'timer', command: 'start' });
-          };
-          buttonsEl.appendChild(timerStartEl);
-          break;
-        }
-        case 'running': {
-          const timerStopEl = document.createElement('button');
-          timerStopEl.textContent = 'Pause Timer';
-          timerStopEl.onclick = () => {
-            sendMessage({ type: 'timer', command: 'pause' });
-          };
-          buttonsEl.appendChild(timerStopEl);
-          break;
-        }
-        case 'paused': {
-          const timerResumeEl = document.createElement('button');
-          timerResumeEl.textContent = 'Resume Timer';
-          timerResumeEl.onclick = () => {
-            sendMessage({ type: 'timer', command: 'start' });
-          };
-          buttonsEl.appendChild(timerResumeEl);
-          const timerResetEl = document.createElement('button');
-          timerResetEl.textContent = 'Reset Timer';
-          timerResetEl.onclick = () => {
-            sendMessage({ type: 'timer', command: 'reset' });
-          };
-          buttonsEl.appendChild(timerResetEl);
-          break;
-        }
-        case 'finished': {
-          const timerResetEl = document.createElement('button');
-          timerResetEl.textContent = 'Reset Timer';
-          timerResetEl.onclick = () => {
-            sendMessage({ type: 'timer', command: 'reset' });
-          };
-          buttonsEl.appendChild(timerResetEl);
-          break;
-        }
+      case 'preset': {
+        const presetFireEl = document.createElement('button');
+        presetFireEl.textContent = 'Fire Preset';
+        buttonsEl.appendChild(presetFireEl);
+        break;
       }
-      break;
     }
-    case 'preset': {
-      const buttonsEl = document.getElementById('buttons') as HTMLDivElement;
-      buttonsEl.innerHTML = '';
-      const presetFireEl = document.createElement('button');
-      presetFireEl.textContent = 'Fire Preset';
-      buttonsEl.appendChild(presetFireEl);
-      break;
-    }
-  }
   if (localCurrentItem < localRundown.length - 1) {
     const nextEl = document.createElement('button');
     nextEl.textContent = 'Go to Next';
@@ -307,23 +431,20 @@ function populateRundown() {
 }
 
 function initItemEditModal(
-  rundown: Rundown,
-  currentItem: number,
-  itemno: number,
-  modal: HTMLDivElement
+  item: RundownItem,
+  modal: HTMLDivElement,
+  cb: (rundownItem: RundownItem) => void
 ) {
-  let workingItem = JSON.parse(JSON.stringify(rundown[itemno])) as RundownItem;
+  let workingItem = JSON.parse(JSON.stringify(item)) as RundownItem;
   function setSaveButtonState() {
-    if (JSON.stringify(rundown[itemno]) !== JSON.stringify(workingItem)) {
+    if (JSON.stringify(item) !== JSON.stringify(workingItem)) {
       modalSaveButton.style.display = '';
     } else {
       modalSaveButton.style.display = 'none';
     }
   }
   modalSaveButton.onclick = () => {
-    const newRundown = JSON.parse(JSON.stringify(rundown)) as Rundown;
-    newRundown[itemno] = workingItem;
-    sendMessage({ type: 'settings', settings: { rundown: newRundown } });
+    cb(workingItem);
     hideModal();
   };
   modalSaveButton.style.display = 'none';
@@ -355,9 +476,24 @@ function initItemEditModal(
       const bumperDiv = document.createElement('div');
       bumperDiv.textContent = 'Bumper:';
       const pickBumper = document.createElement('button');
-      pickBumper.textContent = 'Pick Bumper';
+      pickBumper.appendChild(createTrackDiv(comicItem.bumper));
       pickBumper.onclick = () => {
-        initBumperPickModal(rundown, currentItem, itemno);
+        const modalNodes: Node[] = [];
+        modal.childNodes.forEach((node) => {
+          modalNodes.push(node);
+        });
+        initBumperPickModal(comicItem, (track) => {
+          modalCancelButton.onclick = hideModal;
+          if (track !== undefined) {
+            comicItem.bumper = track;
+            pickBumper.innerHTML = '';
+            pickBumper.appendChild(createTrackDiv(track));
+          }
+          workingItem = comicItem;
+          modal.innerHTML = '';
+          modal.append(...modalNodes);
+          setSaveButtonState();
+        });
       };
       bumperDiv.appendChild(pickBumper);
       modal.appendChild(bumperDiv);
@@ -372,50 +508,33 @@ function initItemEditModal(
       };
       timeDiv.appendChild(timeEl);
       modal.appendChild(timeDiv);
-      populateItemModal = () => {
-        const item = localRundown[itemno];
-        if (item.type !== 'comic' || localRundown.length !== rundown.length) {
-          hideModal();
-          return;
-        }
-        comicItem = JSON.parse(
-          JSON.stringify(rundown[itemno])
-        ) as RundownItemComicSet;
-        nameEl.value = item.name;
-        socialEl.value = item.social || '';
-        timeEl.value = item.time.toString();
-      };
+      nameEl.value = comicItem.name;
+      socialEl.value = comicItem.social || '';
+      timeEl.value = comicItem.time.toString();
       break;
     }
     case 'preset': {
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
       modal.appendChild(nameEl);
-      populateItemModal = () => {
-        const item = localRundown[itemno];
-        if (item.type !== 'preset' || localRundown.length !== rundown.length) {
-          hideModal();
-          return;
-        }
-        nameEl.value = item.name;
-      };
+      nameEl.value = item.name;
       break;
     }
   }
-  populateItemModal();
 }
 
 function initBumperPickModal(
-  rundown: Rundown,
-  currentItem: number,
-  itemno: number
+  item: RundownItem,
+  cb: (track: SpotifyTrack | null | undefined) => void
 ) {
   const modal = displayModal();
   modal.style.display = 'flex';
   modal.style.flexDirection = 'column';
   modalCancelButton.onclick = () => {
     const modal = displayModal();
-    initItemEditModal(rundown, currentItem, itemno, modal);
+    initItemEditModal(item, modal, () => {
+      cb(undefined);      
+    });
   };
   const trackListDiv = document.createElement('div');
   trackListDiv.classList.add('tracklist');
@@ -431,24 +550,7 @@ function initBumperPickModal(
     tracks.forEach((track) => {
       const trackDiv = createTrackDiv(track);
       trackDiv.onclick = () => {
-        const item = localRundown[itemno];
-        hideModal();
-        if (item.type !== 'comic') {
-          log('error', 'Item is not a comic, cannot set bumper');
-          return;
-        }
-        item.bumper = track
-          ? {
-              id: track.id,
-              name: track.name,
-              artist: track.artist,
-              art: track.art,
-            }
-          : null;
-        sendMessage({
-          type: 'settings',
-          settings: { rundown: localRundown },
-        });
+        cb(track);
       };
       trackListDiv.appendChild(trackDiv);
     });
@@ -575,7 +677,6 @@ function displayModal() {
 }
 
 function hideModal() {
-  populateItemModal = () => {};
   (document.getElementById('modal') as HTMLDivElement).style.display = 'none';
 }
 

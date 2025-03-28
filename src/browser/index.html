@@ -6,6 +6,7 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <title>Comedy Control</title>
     <link rel="stylesheet" href="fader.css" />
+    <link rel="stylesheet" href="edit-toggle.css" />
     <style>
       :root {
         --fader-element-width: 3rem;
@@ -43,12 +44,10 @@
       .svg-icon:hover {
         transform: scale(1.2);
       }
-      .svg-icon:active {
-        transform: scale(0.9);
-      }
-      .svg-icon.active {
-        fill: #0f0;
-        stroke: #0f0;
+      .svg-icon.disabled {
+        filter: brightness(0.25);
+        pointer-events: none;
+        cursor: not-allowed;
       }
       button {
         all: unset;
@@ -248,7 +247,7 @@
         border-color: white;
       }
       #warnings {
-        background-color: #ffcccb;
+        background-color: red;
         color: black;
       }
       .track {
@@ -307,7 +306,9 @@
             <div class="fader-label" style="top: 62.5%">-20&mdash;&mdash;</div>
             <div class="fader-label" style="top: 75%">-30&mdash;&mdash;</div>
             <div class="fader-label" style="top: 87.5%">-50&mdash;&mdash;</div>
-            <div class="fader-label" style="top: 100%">-&infin;&mdash;&mdash;</div>
+            <div class="fader-label" style="top: 100%">
+              -&infin;&mdash;&mdash;
+            </div>
           </div>
           <input
             type="range"
@@ -324,6 +325,7 @@
       </div>
       <div id="footer">
         <div id="buttons"></div>
+        <input type="checkbox" id="edit-toggle" />
         <a href="settings.html" target="_blank">
           <svg
             xmlns="http://www.w3.org/2000/svg"

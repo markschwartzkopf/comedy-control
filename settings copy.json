@@ -1,0 +1,77 @@
+{
+  "musicChannel": null,
+  "xairAddress": null,
+  "timerAddress": null,
+  "rundown": [
+    {
+      "type": "preset",
+      "name": "Pre-show",
+      "social": "",
+      "bumper": null,
+      "time": 45
+    },
+    {
+      "type": "comic",
+      "name": "Hosty Hosterson",
+      "social": "@hosterson_with_the_mosterson",
+      "bumper": {
+        "id": "3mwvKOyMmG77zZRunnxp9E",
+        "name": "Buddy Holly",
+        "artist": "Weezer",
+        "art": "https://i.scdn.co/image/ab67616d00001e02345536847e60f622ee0eae96"
+      },
+      "time": 5
+    },
+    {
+      "type": "comic",
+      "name": "Funny McFunnyFace",
+      "social": "@funny_face",
+      "bumper": {
+        "id": "0KIwLmhPmSJNHWJjCRBhd9",
+        "name": "Ruiner",
+        "artist": "Nine Inch Nails",
+        "art": "https://i.scdn.co/image/ab67616d00001e024078c255069c0e7a2553fa4a"
+      },
+      "time": 15
+    },
+    {
+      "type": "comic",
+      "name": "Big Chungus",
+      "social": "@big_chungus",
+      "bumper": {
+        "id": "0cVyQfDyRnMJ0V3rjjdlU3",
+        "name": "Lil Boo Thang",
+        "artist": "Paul Russell",
+        "art": "https://i.scdn.co/image/ab67616d00001e02f1304c61690f550a0d5983b1"
+      },
+      "time": 45
+    },
+    {
+      "type": "preset",
+      "name": "Post-show",
+      "social": "@big_chungus",
+      "bumper": {
+        "id": "0cVyQfDyRnMJ0V3rjjdlU3",
+        "name": "Lil Boo Thang",
+        "artist": "Paul Russell",
+        "art": "https://i.scdn.co/image/ab67616d00001e02f1304c61690f550a0d5983b1"
+      },
+      "time": 45
+    }
+  ],
+  "currentRundownItem": 1,
+  "govees": { "test": "172.19.1.42" },
+  "spotify": {
+    "clientId": "db36a84cc75e4775bcb73ca680456b2b",
+    "clientSecret": "818f500a166a489abac6ef9bc4d0185a",
+    "refreshToken": "AQDP7fFed3xm-4GVTzscZ90x4CowC50ApGz7zqbkZt1JZueiDhflUa3GBbbsFAnTMCN3LFkk_dzGJrkqrn1ksiX_3Tbn_CX3cZiokSZpPuaeTJKlVVSA8yaWjXwY-Mfh3GY",
+    "accessToken": "BQBjgqcRB02n2mMEklZzH8cMmknANhBoOqA1pi0NOxL68SXkRAoyK5fM8NC06_glGp_lT_Rq9wZx2I9Fa8PProhN2de9GbX8_DtfdF797kiqn_rn5csAPE4NWwCVdKB_rAHILwx3hyP2VHcvU2K-1O1ZDIXT5jl67uu1KgvkyhSNytFoESHduAb04StEeWWIgWWm5-QG-KSUTF0RxGXCK1Ry0lUEDcC4vJCKiy2Z0LxHVyVQ2tAX-w",
+    "tokenExpiration": 1743130821315,
+    "redirectUri": "http://localhost:9999/spotify-callback.html",
+    "defaultPlaylist": null,
+    "user": {
+      "id": "31zmbgcypsfddfgjcbxmzk5hsw2q",
+      "name": "Mark Schwartzkopf"
+    }
+  }
+}

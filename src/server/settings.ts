@@ -211,7 +211,7 @@ fs.promises
   });
 
 export function isPartialSettings(input: unknown): input is Partial<Settings> {
-  return (
+  const rtn = (
     typeof input === 'object' &&
     input !== null &&
     hasPropertyWithType(input, 'musicChannel', ['number', 'null', 'partial']) &&
@@ -226,10 +226,14 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
     (!('spotify' in input) ||
       ('spotify' in input && isPartialSpotify(input.spotify)))
   );
+  if (!rtn) {
+    log('error', 'Invalid settings data');
+  }
+  return rtn;
 }
 
 function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
-  return (
+  const rtn = (
     typeof input === 'object' &&
     input !== null &&
     'type' in input &&
@@ -245,10 +249,14 @@ function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
         hasPropertyWithType(input, 'bumperId', ['string', 'null', 'partial']) &&
         hasPropertyWithType(input, 'time', ['number', 'partial'])))
   );
+  if (!rtn) {
+    log('error', 'Invalid RundownItem data');
+  }
+  return rtn;
 }
 
 function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {
-  return (
+  const rtn = (
     typeof input === 'object' &&
     (input === null ||
       (hasPropertyWithType(input, 'id', ['string']) &&
@@ -256,14 +264,22 @@ function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {
         hasPropertyWithType(input, 'artist', ['string']) &&
         hasPropertyWithType(input, 'art', ['string'])))
   );
+  if (!rtn) {
+    log('error', 'Invalid RundownItem bumper data');
+  }
+  return rtn;
 }
 
 function isGovees(input: unknown): input is Settings['govees'] {
-  return (
+  const rtn = (
     typeof input === 'object' &&
     input !== null &&
     Object.values(input).every((value) => typeof value === 'string')
   );
+  if (!rtn) {
+    log('error', 'Invalid Govee data');
+  }
+  return rtn;
 }
 
 function isPartialSpotifyUser(
