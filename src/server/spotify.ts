@@ -63,7 +63,7 @@ function refreshSpotifyToken() {
       !spotifyCredentials.clientSecret ||
       !spotifyCredentials.refreshToken
     ) {
-      log('error', `Spotify not connected, can't refresh token`);
+      reject('Spotify credentials not loaded, cannot refresh token');
       spotifyCredentials.refreshToken = null;
       spotifyCredentials.accessToken = null;
       spotifyCredentials.tokenExpiration = null;
@@ -115,7 +115,7 @@ function refreshSpotifyToken() {
               reject(`Bad token data: ${data}`);
             }
           } catch (err) {
-            log('error', `Error parsing Spotify response: ${err}`);
+            reject(`Error parsing Spotify response: ${err}`);
           }
         } else {
           reject(data);

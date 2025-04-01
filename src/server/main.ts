@@ -1,12 +1,11 @@
 export const util = {
   // These will be replaced by settings.ts
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setSettings: (newSettings: DeepPartial<Settings>) => {
-  },
+  setSettings: (newSettings: DeepPartial<Settings>) => {},
   getSettings: () => {
     return null as unknown as Settings;
-  }
-}
+  },
+};
 
 import { initializeData } from './settings.js';
 import { log } from './logger.js';
@@ -16,14 +15,17 @@ import { connectXair } from './xair.js';
 
 initializeData()
   .then(() => {
-    return initializeSpotify();
+    return initializeSpotify()
   })
   .then(() => {
     return import('./http-server.js');
-  }).then(() => {
+  })
+  .then(() => {
     return import('./timer.js');
-  }).then(() => {
+  })
+  .then(() => {
     connectXair();
+    return import('./qlab.js');
   })
   .catch((err) => {
     log('error', `Error in initialization: ${err}`);

@@ -21,6 +21,7 @@ let settings: Settings = {
     {
       type: 'preset',
       name: 'Pre-show',
+      cueLabCues: [],
     },
     {
       type: 'comic',
@@ -56,6 +57,7 @@ let settings: Settings = {
     {
       type: 'preset',
       name: 'Post-show',
+      cueLabCues: [],
     },
   ],
   currentRundownItem: 0,

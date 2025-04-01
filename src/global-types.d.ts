@@ -59,13 +59,19 @@ type ServerMessageTimerState = {
   state: 'finished' | 'ready' | 'paused' | number;
 };
 
+type ServerMessageQLabCues = {
+  type: 'qlab-cues';
+  cues: QLabCue[];
+};
+
 export type ServerMessage =
   | ServerMessageFader
   | ServerMessageMeter
   | ServerMessageSettings
   | ServerMessageSpotifyTracks
   | ServerMessageSpotifyPlaylists
-  | ServerMessageTimerState;
+  | ServerMessageTimerState
+  | ServerMessageQLabCues;
 
 type ClientMessageLog = {
   type: 'log';
@@ -119,6 +125,10 @@ type ClientMessageTimerCommand =
       time: number;
     };
 
+type ClientMessageGetQLabCues = {
+  type: 'get-qlab-cues';
+};
+
 export type ClientMessage =
   | ClientMessageLog
   | ClientMessageFader
@@ -128,7 +138,8 @@ export type ClientMessage =
   | ClientMessageGetSpotifyPlaylists
   | ClientMessageSpotifyPlay
   | ClientMessageSpotifyPause
-  | ClientMessageTimerCommand;
+  | ClientMessageTimerCommand
+  | ClientMessageGetQLabCues;
 
 export type RundownItemComicSet = {
   type: 'comic';
@@ -141,6 +152,7 @@ export type RundownItemComicSet = {
 type RundownItemPreset = {
   type: 'preset';
   name: string;
+  cueLabCues: MinQLabCue[];
   endTime?: number;
 };
 
@@ -163,20 +175,15 @@ export type SpotifyPlaylist = {
   art: string;
 };
 
-/* 
-function simplifyTracklist(tracklist: Track[]) {
-  return tracklist.map((track) => ({
-    id: track.id,
-    name: track.name,
-    artist: track.artists.map((artist) => artist.name).join(', '),
-    album: track.album.name,
-    duration_ms: track.duration_ms,
-    art: pickAlbumArt(track.album),
-    popularity: track.popularity,
-  }));
-}
+export type MinQLabCue = {
+  listName: string;
+  uniqueID: string;
+};
 
-*/
+export type QLabCue = MinQLabCue & {
+  type: string;
+  cues: QLabCue[];
+};
 
 declare global {
   interface JSON {

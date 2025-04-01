@@ -15,6 +15,7 @@ import {
 } from './spotify';
 import { util } from './main';
 import { getTimerState, sendTimerCommand } from './timer';
+import { getQLabCues } from './qlab';
 
 const PORT = 9999;
 
@@ -196,6 +197,10 @@ const httpServer = http
               if (msg.command === 'reset' && 'time' in msg) {
                 sendTimerCommand(msg.command, msg.time);
               } else sendTimerCommand(msg.command);
+              break;
+            }
+            case 'get-qlab-cues': {
+              getQLabCues();
               break;
             }
             default:

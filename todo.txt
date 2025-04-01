@@ -1,4 +1,5 @@
-add, remove, reorder items
+QLab/Presets
 Pignage integration
+Govee integration
 Special timer control when editing current comic
 Pignage updates on active comic

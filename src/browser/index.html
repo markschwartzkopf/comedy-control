@@ -281,6 +281,25 @@
       .tracklist {
         overflow-y: auto;
       }
+      details > :not(summary) {
+        margin-left: 1em;
+      }
+      .qlab-cue {
+        border: 1px solid gray;
+        color: lightgray;
+        border-radius: 0.25em;
+        background-color: darkcyan;
+        padding: 0.2em;
+        margin-top: 0.2em;
+        margin-bottom: 0.2em;
+      }
+      .qlab-cue.selected {
+        border-color: white;
+        color: white;
+      }
+      details:not([open]):not(:last-child) {
+        margin-bottom: -0.2em;
+      }
     </style>
   </head>
   <body>

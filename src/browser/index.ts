@@ -1,6 +1,9 @@
 import {
+  MinQLabCue,
+  QLabCue,
   RundownItem,
   RundownItemComicSet,
+  RundownItemPreset,
   SpotifyTrack,
 } from '../global-types';
 import {
@@ -11,11 +14,32 @@ import {
   ServerMessage,
 } from '../global-types';
 const svgNS = 'http://www.w3.org/2000/svg'; // SVG namespace
-const trashSvg = `<path d="M21.36 2.16a.96.96 0 0 1 .96.96v.48H1.68v-.48a.96.96 0 0 1 .96-.96zM9.84 2.16V.96a.24.24 0 0 1 .24-.24h3.84a.24.24 0 0 1 .24.24v1.2"/><path fill="none" d="M17.82 22.68a1.44 1.44 0 0 0 1.43-1.24L21.6 4.68H2.4l2.35 16.76a1.44 1.44 0 0 0 1.43 1.24z"/><path stroke-linecap="round" d="M12 7.2v12.96M7.2 7.2l.96 12.96M16.8 7.2l-.96 12.96"/>`;
-const upSvg = `<polygon points="12 0 24 24 0 24"/>`;
-const downSvg = `<polygon points="12 24 24 0 0 0"/>`;
+
+const svgIcons = {
+  trashSvg: `<path stroke="currentColor" stroke-width="0.8" fill="currentColor" d="M21.36 2.16a.96.96 0 0 1 .96.96v.48H1.68v-.48a.96.96 0 0 1 .96-.96zM9.84 2.16V.96a.24.24 0 0 1 .24-.24h3.84a.24.24 0 0 1 .24.24v1.2"/><path stroke="currentColor" stroke-width="0.8" fill="none" d="M17.82 22.68a1.44 1.44 0 0 0 1.43-1.24L21.6 4.68H2.4l2.35 16.76a1.44 1.44 0 0 0 1.43 1.24z"/><path stroke="currentColor" stroke-width="0.8" stroke-linecap="round" d="M12 7.2v12.96M7.2 7.2l.96 12.96M16.8 7.2l-.96 12.96"/>`,
+  upSvg: `<polygon fill="currentColor" points="12 0 24 24 0 24"/>`,
+  downSvg: `<polygon fill="currentColor" points="12 24 24 0 0 0"/>`,
+  add: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>`,
+  remove: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/><path d="M5 12h14" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>`,
+  edit: `<path fill="currentColor" d="m14.92 4.04 4.88 4.88L7.45 21.28 2.57 16.4 14.92 4.04zm8.59-1.17L21.33.69a2.16 2.16 0 0 0-3.05 0l-2.09 2.08 4.88 4.89 2.44-2.44c.65-.65.65-1.7 0-2.35zM0 23.26c-.09.4.28.76.68.66l5.43-1.32-4.87-4.88L0 23.26z"/>`,
+} as const;
+
+function getSvgIcon(
+  name: keyof typeof svgIcons,
+  options: { [key: string]: string } = {}
+) {
+  const icon = document.createElementNS(svgNS, 'svg');
+  icon.classList.add('svg-icon');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  Object.entries(options).forEach(([key, value]) => {
+    icon.setAttribute(key, value);
+  });
+  icon.innerHTML = svgIcons[name];
+  return icon;
+}
 
 let handleTracks: ((tracks: SpotifyTrack[]) => void) | null = null;
+let handleQlab: ((cues: QLabCue[]) => void) | null = null;
 const faderInput = document.getElementById('fader-input') as HTMLInputElement;
 faderInput.oninput = throttle(() => {
   sendMessage({ type: 'f', l: parseFloat(faderInput.value) });
@@ -124,6 +148,10 @@ function connect() {
             }
             break;
           }
+          case 'qlab-cues': {
+            if (handleQlab) handleQlab(message.cues);
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
         }
@@ -171,13 +199,7 @@ function populateRundown() {
       if (isActive) activeTimeDiv = timeEl;
     }
     if (editMode) {
-      const trashIcon = document.createElementNS(svgNS, 'svg');
-      trashIcon.classList.add('svg-icon');
-      trashIcon.setAttribute('viewBox', '0 0 24 24');
-      trashIcon.setAttribute('fill', 'gray');
-      trashIcon.setAttribute('stroke', 'gray');
-      trashIcon.setAttribute('stroke-width', '0.8');
-      trashIcon.innerHTML = trashSvg;
+      const trashIcon = getSvgIcon('trashSvg');
       trashIcon.onclick = (e) => {
         e.stopPropagation();
         const newCurrentRundownItem =
@@ -193,12 +215,8 @@ function populateRundown() {
         });
       };
       itemEl.appendChild(trashIcon);
-      const upIcon = document.createElementNS(svgNS, 'svg');
-      upIcon.classList.add('svg-icon');
+      const upIcon = getSvgIcon('upSvg');
       if (i === 0) upIcon.classList.add('disabled');
-      upIcon.setAttribute('viewBox', '0 0 24 24');
-      upIcon.setAttribute('fill', 'gray');
-      upIcon.innerHTML = upSvg;
       upIcon.onclick = (e) => {
         e.stopPropagation();
         const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
@@ -219,12 +237,8 @@ function populateRundown() {
         });
       };
       itemEl.appendChild(upIcon);
-      const downIcon = document.createElementNS(svgNS, 'svg');
-      downIcon.classList.add('svg-icon');
+      const downIcon = getSvgIcon('downSvg');
       if (i === localRundown.length - 1) downIcon.classList.add('disabled');
-      downIcon.setAttribute('viewBox', '0 0 24 24');
-      downIcon.setAttribute('fill', 'gray');
-      downIcon.innerHTML = downSvg;
       downIcon.onclick = (e) => {
         e.stopPropagation();
         const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
@@ -293,23 +307,17 @@ function populateRundown() {
   if (editMode) {
     function editNewItem(item: RundownItem) {
       const modal = displayModal();
-      initItemEditModal(
-        item,
-        modal,
-        (item) => {
-          const newRundown = JSON.parse(
-            JSON.stringify(localRundown)
-          ) as Rundown;
-          newRundown.push(item);
-          sendMessage({ type: 'settings', settings: { rundown: newRundown } });
-          hideModal();
-        }
-      );
+      initItemEditModal(item, modal, (item) => {
+        const newRundown = JSON.parse(JSON.stringify(localRundown)) as Rundown;
+        newRundown.push(item);
+        sendMessage({ type: 'settings', settings: { rundown: newRundown } });
+        hideModal();
+      });
     }
     const addItemEl = document.createElement('div');
     const addComicButton = document.createElement('button');
     addComicButton.textContent = 'Add Comic';
-    addComicButton.onclick = () => {      
+    addComicButton.onclick = () => {
       editNewItem({
         type: 'comic',
         name: '',
@@ -326,6 +334,7 @@ function populateRundown() {
       editNewItem({
         type: 'preset',
         name: '',
+        cueLabCues: [],
       });
     };
     addItemEl.appendChild(addPresetButton);
@@ -514,10 +523,97 @@ function initItemEditModal(
       break;
     }
     case 'preset': {
+      let presetItem = workingItem as RundownItemPreset;
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
       modal.appendChild(nameEl);
       nameEl.value = item.name;
+      const qlabDiv = document.createElement('div');
+      const qlabHeader = document.createElement('div');
+      qlabHeader.textContent = `QLab Cues:`;
+      const editIcon = document.createElement('input');
+      editIcon.type = 'checkbox';
+      editIcon.style.fontSize = '0.3em';
+      editIcon.style.float = 'right';
+      qlabHeader.appendChild(editIcon);
+      qlabDiv.appendChild(qlabHeader);
+      const qlabListDiv = document.createElement('div');
+      function updateQlabList() {
+        if (editIcon.checked) {
+          function populateDetails(
+            el: HTMLElement,
+            cues: QLabCue[],
+            level: number
+          ): boolean {
+            if (level === 0 && cues.length === 1) {
+              return populateDetails(el, cues[0].cues, level + 1);
+            }
+            let rtn = false;
+            cues.forEach((cue) => {
+              let cueEl: HTMLElement;
+              if (cue.cues.length) {
+                const cueDetails = document.createElement('details');
+                cueEl = document.createElement('summary');
+                cueDetails.appendChild(cueEl);
+                rtn = populateDetails(cueDetails, cue.cues, level + 1) || rtn;
+                el.appendChild(cueDetails);
+              } else {
+                cueEl = document.createElement('div');
+                el.appendChild(cueEl);
+              }
+              cueEl.classList.add('qlab-cue');
+              cueEl.textContent = cue.listName;              
+              let btn: SVGSVGElement;
+              if (presetItem.cueLabCues.map((cue) => cue.uniqueID).includes(cue.uniqueID)) {
+                btn = getSvgIcon('remove');
+                cueEl.classList.add('selected');
+                rtn = true;
+              } else {
+                btn = getSvgIcon('add');
+              }
+              btn.style.height = '1em';
+              btn.style.margin = '0 0 0 1em';
+              btn.style.float = 'right';
+              btn.onclick = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const newCues = [...presetItem.cueLabCues];
+                if (newCues.map((cue) => cue.uniqueID).includes(cue.uniqueID)) {
+                  newCues.splice(newCues.indexOf(cue), 1);
+                  cueEl.classList.remove('selected');
+                  btn.innerHTML = getSvgIcon('add').innerHTML;
+                } else {
+                  newCues.push(cue);
+                  btn.innerHTML = getSvgIcon('remove').innerHTML;
+                  cueEl.classList.add('selected');
+                }
+                presetItem.cueLabCues = newCues;
+                workingItem = presetItem;
+                setSaveButtonState();
+              };
+              cueEl.appendChild(btn);
+            });
+            if (rtn && 'open' in el) el.open = true;
+            return rtn;
+          }
+          handleQlab = (cues: QLabCue[]) => {
+            qlabListDiv.innerHTML = '';
+            populateDetails(qlabListDiv, cues, 0);        
+            handleQlab = null;
+          };
+          sendMessage({ type: 'get-qlab-cues' });
+        } else {
+          if (presetItem.cueLabCues.length) {
+            qlabListDiv.innerHTML = presetItem.cueLabCues.map((cue) => cue.listName).join(', ');
+          } else {
+            qlabListDiv.innerHTML = 'none';
+          }
+        }
+      }
+      editIcon.onchange = updateQlabList;
+      updateQlabList();
+      qlabDiv.appendChild(qlabListDiv);
+      modal.appendChild(qlabDiv);
       break;
     }
   }
@@ -533,7 +629,7 @@ function initBumperPickModal(
   modalCancelButton.onclick = () => {
     const modal = displayModal();
     initItemEditModal(item, modal, () => {
-      cb(undefined);      
+      cb(undefined);
     });
   };
   const trackListDiv = document.createElement('div');
@@ -678,6 +774,8 @@ function displayModal() {
 
 function hideModal() {
   (document.getElementById('modal') as HTMLDivElement).style.display = 'none';
+  handleTracks = null;
+  handleQlab = null;
 }
 
 function setLongPress(element: HTMLElement, callback: () => void) {

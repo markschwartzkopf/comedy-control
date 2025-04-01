@@ -90,14 +90,15 @@ export function oscMessageFromBuffer(buf: Buffer) {
         break;
       default:
         canReadPast = false;
-        console.log(
+        log(
+          'error',
           `OSC message with unknown type: ${type} in address: ${address}`
         );
         break;
     }
     offset++;
   }
-  skipToNextBlock();  
+  skipToNextBlock();
   const args: OscArgument[] = [];
   types.forEach((type) => {
     switch (type) {
