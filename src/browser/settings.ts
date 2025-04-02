@@ -11,6 +11,7 @@ let settings: Settings | null = null;
 const timerAddress = document.getElementById(
   'timer-address'
 ) as HTMLInputElement;
+const qlabAddress = document.getElementById('qlab-address') as HTMLInputElement;
 const xairAddress = document.getElementById('xair-address') as HTMLInputElement;
 const musicChannel = document.getElementById(
   'music-channel'
@@ -19,6 +20,7 @@ const defaultPlaylist = document.getElementById(
   'default-playlist'
 ) as HTMLInputElement;
 timerAddress.oninput = setButtons;
+qlabAddress.oninput = setButtons;
 xairAddress.oninput = setButtons;
 musicChannel.oninput = setButtons;
 defaultPlaylist.oninput = setButtons;
@@ -31,6 +33,7 @@ saveButton.onclick = () => {
     type: 'settings',
     settings: {
       timerAddress: timerAddress.value || null,
+      qlabAddress: qlabAddress.value || null,
       xairAddress: xairAddress.value || null,
       musicChannel: musicChannel.value ? parseInt(musicChannel.value) : null,
       spotify: {
@@ -126,6 +129,7 @@ function connect() {
             settings = message.settings;
             if (changed || !settings) populateSpotifyFooter();
             populateValues();
+            setButtons();
             break;
           }
           case 'spotify-tracks': {
@@ -143,6 +147,12 @@ function connect() {
             break;
           }
           case 'timer': {
+            break;
+          }
+          case 'qlab-cues': {
+            break;
+          }
+          case 'services-connected': {
             break;
           }
           default:
@@ -193,16 +203,25 @@ function generateRandomString(length: number) {
 
 function setButtons() {
   let changed = false;
-  if (settings && timerAddress.value !== settings.timerAddress) {
+  if (settings && timerAddress.value !== (settings.timerAddress || '')) {
     changed = true;
   }
-  if (settings && xairAddress.value !== settings.xairAddress) {
+  if (settings && qlabAddress.value !== (settings.qlabAddress || '')) {
     changed = true;
   }
-  if (settings && parseInt(musicChannel.value) !== settings.musicChannel) {
+  if (settings && xairAddress.value !== (settings.xairAddress || '')) {
     changed = true;
   }
-  if (settings && defaultPlaylist.value !== settings.spotify.defaultPlaylist) {
+  if (
+    settings &&
+    musicChannel.value !== (settings.musicChannel?.toString() || '')
+  ) {
+    changed = true;
+  }
+  if (
+    settings &&
+    defaultPlaylist.value !== (settings.spotify.defaultPlaylist || '')
+  ) {
     changed = true;
   }
   if (changed) {
@@ -214,6 +233,7 @@ function setButtons() {
 
 function populateValues() {
   timerAddress.value = settings ? settings.timerAddress || '' : '';
+  qlabAddress.value = settings ? settings.qlabAddress || '' : '';
   xairAddress.value = settings ? settings.xairAddress || '' : '';
   musicChannel.value = settings ? settings.musicChannel?.toString() || '' : '';
   defaultPlaylist.value = settings

@@ -1,5 +1,4 @@
-QLab/Presets
 Pignage integration
+Pignage updates on active comic
 Govee integration
 Special timer control when editing current comic
-Pignage updates on active comic

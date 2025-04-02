@@ -11,6 +11,7 @@ export type Settings = {
   musicChannel: number | null;
   xairAddress: string | null;
   timerAddress: string | null;
+  qlabAddress: string | null;
   rundown: Rundown;
   currentRundownItem: number;
   govees: { [k: string]: string };
@@ -64,6 +65,13 @@ type ServerMessageQLabCues = {
   cues: QLabCue[];
 };
 
+type ServerMessageServicesConnected = {
+  type: 'services-connected';
+  xair?: boolean;
+  timer?: boolean;
+  qlab?: boolean;
+};
+
 export type ServerMessage =
   | ServerMessageFader
   | ServerMessageMeter
@@ -71,7 +79,8 @@ export type ServerMessage =
   | ServerMessageSpotifyTracks
   | ServerMessageSpotifyPlaylists
   | ServerMessageTimerState
-  | ServerMessageQLabCues;
+  | ServerMessageQLabCues
+  | ServerMessageServicesConnected;
 
 type ClientMessageLog = {
   type: 'log';
@@ -129,6 +138,11 @@ type ClientMessageGetQLabCues = {
   type: 'get-qlab-cues';
 };
 
+type ClientMessageFireQlabCues = {
+  type: 'fire-qlab-cues';
+  ids: string[];
+};
+
 export type ClientMessage =
   | ClientMessageLog
   | ClientMessageFader
@@ -139,7 +153,8 @@ export type ClientMessage =
   | ClientMessageSpotifyPlay
   | ClientMessageSpotifyPause
   | ClientMessageTimerCommand
-  | ClientMessageGetQLabCues;
+  | ClientMessageGetQLabCues
+  | ClientMessageFireQlabCues;
 
 export type RundownItemComicSet = {
   type: 'comic';

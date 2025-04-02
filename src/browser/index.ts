@@ -1,5 +1,4 @@
 import {
-  MinQLabCue,
   QLabCue,
   RundownItem,
   RundownItemComicSet,
@@ -52,6 +51,10 @@ const spotifyWarning = document.createElement('a');
 spotifyWarning.href = 'settings.html';
 spotifyWarning.target = '_blank';
 spotifyWarning.textContent = 'Spotify not connected';
+const qlabWarning = document.createElement('a');
+qlabWarning.href = 'settings.html';
+qlabWarning.target = '_blank';
+qlabWarning.textContent = 'QLab not connected';
 
 let localRundown: Rundown = [];
 let localCurrentItem = 0;
@@ -103,6 +106,22 @@ function connect() {
           }
           case 'f': {
             faderInput.value = message.l.toString();
+            break;
+          }
+          case 'services-connected': {
+            console.log('Services connected:', message);
+            if ('qlab' in message && message.qlab !== undefined) {
+              console.log(message.qlab);
+              if (message.qlab) {
+                if (warningsDiv.contains(qlabWarning)) {
+                  warningsDiv.removeChild(qlabWarning);
+                }
+              } else {
+                if (!warningsDiv.contains(qlabWarning)) {
+                  warningsDiv.appendChild(qlabWarning);
+                }
+              }
+            }
             break;
           }
           case 'settings': {
@@ -301,7 +320,9 @@ function populateRundown() {
     setLongPress(itemEl, editItem);
     rundownEl.appendChild(itemEl);
   }
-  const currentRundownItem = localRundown[localCurrentItem];
+  const currentRundownItem: RundownItem | undefined = localRundown[
+    localCurrentItem
+  ] as RundownItem | undefined;
   const buttonsEl = document.getElementById('buttons') as HTMLDivElement;
   buttonsEl.innerHTML = '';
   if (editMode) {
@@ -340,80 +361,89 @@ function populateRundown() {
     addItemEl.appendChild(addPresetButton);
     buttonsEl.appendChild(addItemEl);
     return;
-  } else
-    switch (currentRundownItem.type) {
-      case 'comic': {
-        if (currentRundownItem.bumper) {
-          const trackId = currentRundownItem.bumper.id;
-          const bumperPLayEl = document.createElement('button');
-          bumperPLayEl.textContent = 'Play Bumper';
-          buttonsEl.appendChild(bumperPLayEl);
-          bumperPLayEl.onclick = () => {
-            sendMessage({
-              type: 'spotify-play',
-              id: trackId,
-            });
-          };
-        }
-        const bumperStopEl = document.createElement('button');
-        bumperStopEl.textContent = 'Stop Spotify';
-        bumperStopEl.onclick = () => {
-          sendMessage({ type: 'spotify-pause' });
+  } else if (!currentRundownItem) {
+    log('warn', 'No current rundown item found');
+    return;
+  }
+  switch (currentRundownItem.type) {
+    case 'comic': {
+      if (currentRundownItem.bumper) {
+        const trackId = currentRundownItem.bumper.id;
+        const bumperPLayEl = document.createElement('button');
+        bumperPLayEl.textContent = 'Play Bumper';
+        buttonsEl.appendChild(bumperPLayEl);
+        bumperPLayEl.onclick = () => {
+          sendMessage({
+            type: 'spotify-play',
+            id: trackId,
+          });
         };
-        buttonsEl.appendChild(bumperStopEl);
-        switch (timerState) {
-          case 'ready': {
-            const timerStartEl = document.createElement('button');
-            timerStartEl.textContent = 'Start Timer';
-            timerStartEl.onclick = () => {
-              sendMessage({ type: 'timer', command: 'start' });
-            };
-            buttonsEl.appendChild(timerStartEl);
-            break;
-          }
-          case 'running': {
-            const timerStopEl = document.createElement('button');
-            timerStopEl.textContent = 'Pause Timer';
-            timerStopEl.onclick = () => {
-              sendMessage({ type: 'timer', command: 'pause' });
-            };
-            buttonsEl.appendChild(timerStopEl);
-            break;
-          }
-          case 'paused': {
-            const timerResumeEl = document.createElement('button');
-            timerResumeEl.textContent = 'Resume Timer';
-            timerResumeEl.onclick = () => {
-              sendMessage({ type: 'timer', command: 'start' });
-            };
-            buttonsEl.appendChild(timerResumeEl);
-            const timerResetEl = document.createElement('button');
-            timerResetEl.textContent = 'Reset Timer';
-            timerResetEl.onclick = () => {
-              sendMessage({ type: 'timer', command: 'reset' });
-            };
-            buttonsEl.appendChild(timerResetEl);
-            break;
-          }
-          case 'finished': {
-            const timerResetEl = document.createElement('button');
-            timerResetEl.textContent = 'Reset Timer';
-            timerResetEl.onclick = () => {
-              sendMessage({ type: 'timer', command: 'reset' });
-            };
-            buttonsEl.appendChild(timerResetEl);
-            break;
-          }
+      }
+      const bumperStopEl = document.createElement('button');
+      bumperStopEl.textContent = 'Stop Spotify';
+      bumperStopEl.onclick = () => {
+        sendMessage({ type: 'spotify-pause' });
+      };
+      buttonsEl.appendChild(bumperStopEl);
+      switch (timerState) {
+        case 'ready': {
+          const timerStartEl = document.createElement('button');
+          timerStartEl.textContent = 'Start Timer';
+          timerStartEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'start' });
+          };
+          buttonsEl.appendChild(timerStartEl);
+          break;
         }
-        break;
+        case 'running': {
+          const timerStopEl = document.createElement('button');
+          timerStopEl.textContent = 'Pause Timer';
+          timerStopEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'pause' });
+          };
+          buttonsEl.appendChild(timerStopEl);
+          break;
+        }
+        case 'paused': {
+          const timerResumeEl = document.createElement('button');
+          timerResumeEl.textContent = 'Resume Timer';
+          timerResumeEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'start' });
+          };
+          buttonsEl.appendChild(timerResumeEl);
+          const timerResetEl = document.createElement('button');
+          timerResetEl.textContent = 'Reset Timer';
+          timerResetEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'reset' });
+          };
+          buttonsEl.appendChild(timerResetEl);
+          break;
+        }
+        case 'finished': {
+          const timerResetEl = document.createElement('button');
+          timerResetEl.textContent = 'Reset Timer';
+          timerResetEl.onclick = () => {
+            sendMessage({ type: 'timer', command: 'reset' });
+          };
+          buttonsEl.appendChild(timerResetEl);
+          break;
+        }
       }
-      case 'preset': {
-        const presetFireEl = document.createElement('button');
-        presetFireEl.textContent = 'Fire Preset';
-        buttonsEl.appendChild(presetFireEl);
-        break;
-      }
+      break;
     }
+    case 'preset': {
+      const presetFireEl = document.createElement('button');
+      presetFireEl.textContent = 'Fire Preset';
+      buttonsEl.appendChild(presetFireEl);
+      presetFireEl.onclick = () => {
+        const cueIDs = (currentRundownItem as RundownItemPreset).cueLabCues.map(
+          (cue) => cue.uniqueID
+        );
+        sendMessage({ type: 'fire-qlab-cues', ids: cueIDs });
+      };
+      break;
+    }
+  }
   if (localCurrentItem < localRundown.length - 1) {
     const nextEl = document.createElement('button');
     nextEl.textContent = 'Go to Next';
@@ -524,11 +554,19 @@ function initItemEditModal(
     }
     case 'preset': {
       let presetItem = workingItem as RundownItemPreset;
+      const nameDiv = document.createElement('div');
+      nameDiv.textContent = 'Name:';
       const nameEl = document.createElement('input');
       nameEl.type = 'text';
-      modal.appendChild(nameEl);
-      nameEl.value = item.name;
+      nameEl.oninput = () => {
+        presetItem.name = nameEl.value;
+        workingItem = presetItem;
+        setSaveButtonState();
+      };
+      nameDiv.appendChild(nameEl);
+      modal.appendChild(nameDiv);
       const qlabDiv = document.createElement('div');
+      qlabDiv.style.margin = '0.5em 0 0.5em 0';
       const qlabHeader = document.createElement('div');
       qlabHeader.textContent = `QLab Cues:`;
       const editIcon = document.createElement('input');
@@ -538,6 +576,7 @@ function initItemEditModal(
       qlabHeader.appendChild(editIcon);
       qlabDiv.appendChild(qlabHeader);
       const qlabListDiv = document.createElement('div');
+      qlabListDiv.style.margin = '0 1em';
       function updateQlabList() {
         if (editIcon.checked) {
           function populateDetails(
@@ -562,9 +601,13 @@ function initItemEditModal(
                 el.appendChild(cueEl);
               }
               cueEl.classList.add('qlab-cue');
-              cueEl.textContent = cue.listName;              
+              cueEl.textContent = cue.listName;
               let btn: SVGSVGElement;
-              if (presetItem.cueLabCues.map((cue) => cue.uniqueID).includes(cue.uniqueID)) {
+              if (
+                presetItem.cueLabCues
+                  .map((cue) => cue.uniqueID)
+                  .includes(cue.uniqueID)
+              ) {
                 btn = getSvgIcon('remove');
                 cueEl.classList.add('selected');
                 rtn = true;
@@ -598,13 +641,15 @@ function initItemEditModal(
           }
           handleQlab = (cues: QLabCue[]) => {
             qlabListDiv.innerHTML = '';
-            populateDetails(qlabListDiv, cues, 0);        
+            populateDetails(qlabListDiv, cues, 0);
             handleQlab = null;
           };
           sendMessage({ type: 'get-qlab-cues' });
         } else {
           if (presetItem.cueLabCues.length) {
-            qlabListDiv.innerHTML = presetItem.cueLabCues.map((cue) => cue.listName).join(', ');
+            qlabListDiv.innerHTML = presetItem.cueLabCues
+              .map((cue) => cue.listName)
+              .join(', ');
           } else {
             qlabListDiv.innerHTML = 'none';
           }
@@ -638,7 +683,6 @@ function initBumperPickModal(
   handleTracks = (tracksIn: SpotifyTrack[]) => {
     const tracks = [...tracksIn, null];
     if (!modal.contains(trackListDiv)) {
-      console.log('Song select modal no longer active, resetting handleTracks');
       handleTracks = null;
       return;
     }

@@ -15,7 +15,7 @@ import {
 } from './spotify';
 import { util } from './main';
 import { getTimerState, sendTimerCommand } from './timer';
-import { getQLabCues } from './qlab';
+import { fireQLabCues, getQLabCues, isQLabConnected } from './qlab';
 
 const PORT = 9999;
 
@@ -121,6 +121,10 @@ const httpServer = http
         },
         ws
       );
+      sendServerMessage({
+        type: 'services-connected',
+        qlab: isQLabConnected(),
+      });
       ws.on('message', (message) => {
         try {
           const msg = JSON.parse(message.toString()) as ClientMessage;
@@ -201,6 +205,14 @@ const httpServer = http
             }
             case 'get-qlab-cues': {
               getQLabCues();
+              break;
+            }
+            case 'fire-qlab-cues': {
+              if (msg.ids.length > 0) {
+                fireQLabCues(msg.ids);
+              } else {
+                log('warn', `No cue IDs provided to fire`);
+              }
               break;
             }
             default:

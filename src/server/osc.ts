@@ -13,7 +13,7 @@ type OscString = {
   value: string;
 };
 type OscArgument = OscInt | OscFloat | OscString;
-type OscMessage = { address: string[]; arguments: OscArgument[] };
+export type OscMessage = { address: string[]; arguments: OscArgument[] };
 
 export function oscMessageToBuffer(message: OscMessage): Buffer {
   const addressBuf = strToBuf('/' + message.address.join('/'));

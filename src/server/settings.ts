@@ -17,49 +17,8 @@ let settings: Settings = {
   musicChannel: null,
   xairAddress: null,
   timerAddress: null,
-  rundown: [
-    {
-      type: 'preset',
-      name: 'Pre-show',
-      cueLabCues: [],
-    },
-    {
-      type: 'comic',
-      name: 'Hosty Hosterson',
-      social: '@hosterson_with_the_mosterson',
-      bumper: {
-        id: 'spotify_id_buddy_holly',
-        name: 'Buddy Holly',
-        artist: 'Weezer',
-        art: '',
-      },
-      time: 5,
-    },
-    {
-      type: 'comic',
-      name: 'Funny McFunnyFace',
-      social: '@funny_face',
-      bumper: {
-        id: 'spotify_id_boo_thang',
-        name: 'Boo Thang',
-        artist: 'DJ Khaled',
-        art: '',
-      },
-      time: 15,
-    },
-    {
-      type: 'comic',
-      name: 'Big Chungus',
-      social: '@big_chungus',
-      bumper: null,
-      time: 45,
-    },
-    {
-      type: 'preset',
-      name: 'Post-show',
-      cueLabCues: [],
-    },
-  ],
+  qlabAddress: null,
+  rundown: [],
   currentRundownItem: 0,
   govees: { test: '172.19.1.42' },
   spotify: {
@@ -77,6 +36,7 @@ let settings: Settings = {
   },
 };
 const settingsFile = path.join(__dirname, '..', '..', 'settings.json');
+const oldSettingsFile = path.join(__dirname, '..', '..', 'settings.json.bad');
 
 export function initializeData() {
   return fs.promises
@@ -101,7 +61,28 @@ export function initializeData() {
     })
     .catch(async () => {
       log('warn', 'creating settings file');
-      return saveSettings();
+      fs.promises
+        .access(settingsFile)
+        .then(() => {
+          log(
+            'info',
+            'Old settings file exists, but failed. Backing it up to settings.json.bad'
+          );
+          return fs.promises
+            .copyFile(settingsFile, oldSettingsFile)
+            .catch((err) => {
+              log('error', `Error backing up old settings file: ${err}`);
+            });
+        })
+        .catch(() => {
+          //old file did not exist. We don't care
+        })
+        .finally(() => {
+          return saveSettings();
+        })
+        .catch((err) => {
+          log('error', `Error saving new settings file: ${err}`);
+        });
     })
     .catch((err) => {
       log('error', `Error initializing settings: ${err}`);
@@ -117,7 +98,7 @@ function getSettings() {
 }
 
 function setSettings(newSettings: DeepPartial<Settings>) {
-  const oldMixerAddress = settings.xairAddress;  
+  const oldMixerAddress = settings.xairAddress;
   updateObjectWithPartial(settings, newSettings);
   if (oldMixerAddress !== settings.xairAddress) {
     log('info', `Xair address changed to ${newSettings.xairAddress}`);
@@ -213,12 +194,13 @@ fs.promises
   });
 
 export function isPartialSettings(input: unknown): input is Partial<Settings> {
-  const rtn = (
+  const rtn =
     typeof input === 'object' &&
     input !== null &&
     hasPropertyWithType(input, 'musicChannel', ['number', 'null', 'partial']) &&
     hasPropertyWithType(input, 'xairAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'timerAddress', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'qlabAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'currentRundownItem', ['number', 'partial']) &&
     (!('rundown' in input) ||
       ('rundown' in input &&
@@ -226,8 +208,7 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
         input.rundown.every(isPartialRundownItem))) &&
     (!('govees' in input) || ('govees' in input && isGovees(input.govees))) &&
     (!('spotify' in input) ||
-      ('spotify' in input && isPartialSpotify(input.spotify)))
-  );
+      ('spotify' in input && isPartialSpotify(input.spotify)));
   if (!rtn) {
     log('error', 'Invalid settings data');
   }
@@ -235,7 +216,7 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
 }
 
 function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
-  const rtn = (
+  const rtn =
     typeof input === 'object' &&
     input !== null &&
     'type' in input &&
@@ -249,8 +230,7 @@ function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
         (!('bumper' in input) ||
           ('bumper' in input && isBumper(input.bumper))) &&
         hasPropertyWithType(input, 'bumperId', ['string', 'null', 'partial']) &&
-        hasPropertyWithType(input, 'time', ['number', 'partial'])))
-  );
+        hasPropertyWithType(input, 'time', ['number', 'partial'])));
   if (!rtn) {
     log('error', 'Invalid RundownItem data');
   }
@@ -258,14 +238,13 @@ function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
 }
 
 function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {
-  const rtn = (
+  const rtn =
     typeof input === 'object' &&
     (input === null ||
       (hasPropertyWithType(input, 'id', ['string']) &&
         hasPropertyWithType(input, 'name', ['string']) &&
         hasPropertyWithType(input, 'artist', ['string']) &&
-        hasPropertyWithType(input, 'art', ['string'])))
-  );
+        hasPropertyWithType(input, 'art', ['string'])));
   if (!rtn) {
     log('error', 'Invalid RundownItem bumper data');
   }
@@ -273,11 +252,10 @@ function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {
 }
 
 function isGovees(input: unknown): input is Settings['govees'] {
-  const rtn = (
+  const rtn =
     typeof input === 'object' &&
     input !== null &&
-    Object.values(input).every((value) => typeof value === 'string')
-  );
+    Object.values(input).every((value) => typeof value === 'string');
   if (!rtn) {
     log('error', 'Invalid Govee data');
   }
