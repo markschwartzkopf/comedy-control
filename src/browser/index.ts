@@ -3,6 +3,7 @@ import {
   RundownItem,
   RundownItemComicSet,
   RundownItemPreset,
+  ServerMessagePignageInfo,
   SpotifyTrack,
 } from '../global-types';
 import {
@@ -21,6 +22,8 @@ const svgIcons = {
   add: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>`,
   remove: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/><path d="M5 12h14" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>`,
   edit: `<path fill="currentColor" d="m14.92 4.04 4.88 4.88L7.45 21.28 2.57 16.4 14.92 4.04zm8.59-1.17L21.33.69a2.16 2.16 0 0 0-3.05 0l-2.09 2.08 4.88 4.89 2.44-2.44c.65-.65.65-1.7 0-2.35zM0 23.26c-.09.4.28.76.68.66l5.43-1.32-4.87-4.88L0 23.26z"/>`,
+  checkboxChecked: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/><path d="M4 12l5.3 5.3l10.6 -10.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>`,
+  checkboxUnchecked: `<rect x="0.5" y="0.5" width="23" height="23" fill="none" stroke="currentColor" stroke-width="0.8" rx="4" ry="4"/>`,
 } as const;
 
 function getSvgIcon(
@@ -68,6 +71,12 @@ editToggle.onclick = () => {
   populateRundown();
 };
 
+let pignageInfo: ServerMessagePignageInfo = {
+  type: 'pignage-info',
+  primary: { groups: [], pagesDir: [] },
+  secondary: { groups: [], pagesDir: [] },
+};
+
 let makeActiveButton: HTMLButtonElement | null = null;
 const rundownEl = document.getElementById('rundown') as HTMLDivElement;
 rundownEl.onclick = (e) => {
@@ -109,9 +118,7 @@ function connect() {
             break;
           }
           case 'services-connected': {
-            console.log('Services connected:', message);
             if ('qlab' in message && message.qlab !== undefined) {
-              console.log(message.qlab);
               if (message.qlab) {
                 if (warningsDiv.contains(qlabWarning)) {
                   warningsDiv.removeChild(qlabWarning);
@@ -169,6 +176,10 @@ function connect() {
           }
           case 'qlab-cues': {
             if (handleQlab) handleQlab(message.cues);
+            break;
+          }
+          case 'pignage-info': {
+            pignageInfo = message;
             break;
           }
           default:
@@ -659,6 +670,163 @@ function initItemEditModal(
       updateQlabList();
       qlabDiv.appendChild(qlabListDiv);
       modal.appendChild(qlabDiv);
+      function makePignageDiv(secondary?: 'secondary') {
+        const pignage = !secondary
+          ? pignageInfo.primary
+          : pignageInfo.secondary;
+        const pignageDiv = document.createElement('div');
+        pignageDiv.style.margin = '0.5em 0 0.5em 0';
+        const pignageHeader = document.createElement('div');
+        pignageHeader.textContent = `${
+          !secondary ? 'Primary' : 'Secondary'
+        } Pignage Display:`;
+        const editIcon = document.createElement('input');
+        editIcon.type = 'checkbox';
+        editIcon.style.fontSize = '0.3em';
+        editIcon.style.float = 'right';
+        pignageHeader.appendChild(editIcon);
+        pignageDiv.appendChild(pignageHeader);
+        const pignageListDiv = document.createElement('div');
+        pignageListDiv.style.margin = '0 1em';
+        function populatePignageList() {
+          if (editIcon.checked) {
+            pignageListDiv.innerHTML = '';
+            function createGroup(
+              name: string,
+              files: string[],
+              isPages?: 'isPages'
+            ) {
+              const groupEl = document.createElement('details');
+              const summaryEl = document.createElement('summary');
+              summaryEl.classList.add('qlab-cue');
+              summaryEl.textContent = name;
+              const checked = presetItem.primarySlide === name;
+              if (checked) summaryEl.classList.add('selected');
+              if (!isPages) {
+                const btn = getSvgIcon(
+                  checked ? 'checkboxChecked' : 'checkboxUnchecked'
+                );
+                btn.style.height = '1em';
+                btn.style.margin = '0 0 0 1em';
+                btn.style.float = 'right';
+                btn.onclick = (e) => {
+                  e.stopPropagation();
+                  if (checked) {
+                    delete presetItem.primarySlide;
+                  } else presetItem.primarySlide = name;
+                  workingItem = presetItem;
+                  setSaveButtonState();
+                  populatePignageList();
+                };
+                summaryEl.appendChild(btn);
+              }
+              let open = false;
+              groupEl.appendChild(summaryEl);
+              files.forEach((file) => {
+                const fileEl = document.createElement('div');
+                fileEl.textContent = file;
+                fileEl.classList.add('qlab-cue');
+                const checked = isPages
+                  ? typeof presetItem.primarySlide === 'string' &&
+                    presetItem.primarySlide.split('?')[0] === file
+                  : Array.isArray(presetItem.primarySlide) &&
+                    presetItem.primarySlide[0] === name &&
+                    presetItem.primarySlide[1] === file;
+                if (checked) {
+                  open = true;
+                  fileEl.classList.add('selected');
+                }
+                const argInput = document.createElement('input');
+                argInput.type = 'text';
+                argInput.placeholder = 'Arguments (optional)';
+                if (
+                  checked &&
+                  typeof presetItem.primarySlide === 'string' &&
+                  presetItem.primarySlide.split(file)[1]
+                ) {
+                  argInput.value = presetItem.primarySlide.split(file)[1];
+                }
+                argInput.style.padding = '0';
+                argInput.style.border = '0';
+                argInput.style.borderRadius = '0';
+                argInput.style.marginLeft = '0.2em';
+                argInput.oninput = () => {
+                  if (checked) {
+                    if (isPages) {
+                      let slide = file;
+                      let args = argInput.value.trim();
+                      if (args) {
+                        if (!args.startsWith('?')) args = '?' + args;
+                        slide += args;
+                      }
+                      presetItem.primarySlide = slide;
+                    }
+                    workingItem = presetItem;
+                    setSaveButtonState();
+                  }
+                };
+                if (isPages) {
+                  fileEl.appendChild(argInput);
+                }
+                const btn = getSvgIcon(
+                  checked ? 'checkboxChecked' : 'checkboxUnchecked'
+                );
+                btn.style.height = '1em';
+                btn.style.margin = '0 0 0 1em';
+                btn.style.float = 'right';
+                btn.onclick = (e) => {
+                  e.stopPropagation();
+                  if (checked) {
+                    delete presetItem.primarySlide;
+                  } else {
+                    if (isPages) {
+                      let slide = file;
+                      let args = argInput.value.trim();
+                      if (args) {
+                        if (!args.startsWith('?')) args = '?' + args;
+                        slide += args;
+                      }
+                      presetItem.primarySlide = slide;
+                    } else presetItem.primarySlide = [name, file];
+                  }
+                  workingItem = presetItem;
+                  setSaveButtonState();
+                  populatePignageList();
+                };
+                fileEl.appendChild(btn);
+                groupEl.appendChild(fileEl);
+              });
+              groupEl.open = open;
+              pignageListDiv.appendChild(groupEl);
+            }
+            pignage.groups.forEach((group) => {
+              createGroup(group.name, group.files);
+            });
+            if (pignage.pagesDir.length > 0)
+              createGroup('HTML Pages', pignage.pagesDir, 'isPages');
+          } else {
+            let list = 'none';
+            if (presetItem.primarySlide) {
+              if (typeof presetItem.primarySlide === 'string') {
+                const possibleFilename = presetItem.primarySlide.split('?')[0];
+                if (pignage.pagesDir.includes(possibleFilename)) {
+                  list = `HTML Page "${presetItem.primarySlide}"`;
+                } else {
+                  list = `Play group "${presetItem.primarySlide}"`;
+                }
+              } else
+                list = `Play slide "${presetItem.primarySlide[1]}" from group "${presetItem.primarySlide[0]}"`;
+            }
+            pignageListDiv.innerHTML = list;
+          }
+        }
+        editIcon.onchange = populatePignageList;
+        populatePignageList();
+        pignageDiv.appendChild(pignageListDiv);
+        modal.appendChild(pignageDiv);
+      }
+      makePignageDiv(); // Primary Pignage
+
       break;
     }
   }

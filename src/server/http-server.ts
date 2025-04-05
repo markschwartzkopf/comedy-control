@@ -16,6 +16,7 @@ import {
 import { util } from './main';
 import { getTimerState, sendTimerCommand } from './timer';
 import { fireQLabCues, getQLabCues, isQLabConnected } from './qlab';
+import { getPignageInfo } from './pignage';
 
 const PORT = 9999;
 
@@ -124,7 +125,11 @@ const httpServer = http
       sendServerMessage({
         type: 'services-connected',
         qlab: isQLabConnected(),
-      });
+      }, ws);
+      sendServerMessage({
+        type: 'pignage-info',
+        ...getPignageInfo(),
+      }, ws);
       ws.on('message', (message) => {
         try {
           const msg = JSON.parse(message.toString()) as ClientMessage;

@@ -26,6 +26,8 @@ initializeData()
   .then(() => {
     connectXair();
     return import('./qlab.js');
+  }).then(() => {
+    return import('./pignage.js');
   })
   .catch((err) => {
     log('error', `Error in initialization: ${err}`);

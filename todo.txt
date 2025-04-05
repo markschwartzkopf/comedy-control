@@ -1,4 +1,3 @@
-Pignage integration
-Pignage updates on active comic
+Secondary Pignage
 Govee integration
 Special timer control when editing current comic

@@ -12,12 +12,15 @@ import { log } from './logger';
 import { util } from './main';
 import { hasPropertyWithType } from './utils';
 import { connectXair } from './xair';
+import { setComicCard, setPrimarySlide } from './pignage';
 
 let settings: Settings = {
   musicChannel: null,
   xairAddress: null,
   timerAddress: null,
   qlabAddress: null,
+  primaryPignageAddress: null,
+  secondaryPignageAddress: null,
   rundown: [],
   currentRundownItem: 0,
   govees: { test: '172.19.1.42' },
@@ -100,6 +103,14 @@ function getSettings() {
 function setSettings(newSettings: DeepPartial<Settings>) {
   const oldMixerAddress = settings.xairAddress;
   updateObjectWithPartial(settings, newSettings);
+  const currentItem = settings.rundown[settings.currentRundownItem];
+  if (currentItem && currentItem.type === 'comic') {
+    setComicCard(currentItem.name, currentItem.social || '');
+  } else {
+    if (currentItem && currentItem.primarySlide) {
+      setPrimarySlide(currentItem.primarySlide);
+    }
+  }
   if (oldMixerAddress !== settings.xairAddress) {
     log('info', `Xair address changed to ${newSettings.xairAddress}`);
     connectXair();
@@ -201,6 +212,16 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
     hasPropertyWithType(input, 'xairAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'timerAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'qlabAddress', ['string', 'null', 'partial']) &&
+    hasPropertyWithType(input, 'primaryPignageAddress', [
+      'string',
+      'null',
+      'partial',
+    ]) &&
+    hasPropertyWithType(input, 'secondaryPignageAddress', [
+      'string',
+      'null',
+      'partial',
+    ]) &&
     hasPropertyWithType(input, 'currentRundownItem', ['number', 'partial']) &&
     (!('rundown' in input) ||
       ('rundown' in input &&
@@ -224,7 +245,9 @@ function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
     typeof input.type === 'string' &&
     typeof input.name === 'string' &&
     ((input.type === 'preset' &&
-      hasPropertyWithType(input, 'endTime', ['number', 'partial'])) ||
+      hasPropertyWithType(input, 'endTime', ['number', 'partial']) &&
+      (!('primarySlide' in input) ||
+        ('primarySlide' in input && isSlide(input.primarySlide)))) ||
       (input.type === 'comic' &&
         hasPropertyWithType(input, 'social', ['string', 'null', 'partial']) &&
         (!('bumper' in input) ||
@@ -235,6 +258,17 @@ function isPartialRundownItem(input: unknown): input is Partial<RundownItem> {
     log('error', 'Invalid RundownItem data');
   }
   return rtn;
+}
+
+function isSlide(input: unknown): input is string | [string, string] {
+  if (typeof input === 'string') {
+    return true;
+  }
+  if (Array.isArray(input) && input.length === 2) {
+    return typeof input[0] === 'string' && typeof input[1] === 'string';
+  }
+  log('error', 'Invalid slide data');
+  return false;
 }
 
 function isBumper(input: unknown): input is RundownItemComicSet['bumper'] {

@@ -11,6 +11,9 @@ let settings: Settings | null = null;
 const timerAddress = document.getElementById(
   'timer-address'
 ) as HTMLInputElement;
+const primaryPignageAddress = document.getElementById(
+  'primary-pignage-address'
+) as HTMLInputElement;
 const qlabAddress = document.getElementById('qlab-address') as HTMLInputElement;
 const xairAddress = document.getElementById('xair-address') as HTMLInputElement;
 const musicChannel = document.getElementById(
@@ -20,6 +23,7 @@ const defaultPlaylist = document.getElementById(
   'default-playlist'
 ) as HTMLInputElement;
 timerAddress.oninput = setButtons;
+primaryPignageAddress.oninput = setButtons;
 qlabAddress.oninput = setButtons;
 xairAddress.oninput = setButtons;
 musicChannel.oninput = setButtons;
@@ -33,6 +37,7 @@ saveButton.onclick = () => {
     type: 'settings',
     settings: {
       timerAddress: timerAddress.value || null,
+      primaryPignageAddress: primaryPignageAddress.value || null,
       qlabAddress: qlabAddress.value || null,
       xairAddress: xairAddress.value || null,
       musicChannel: musicChannel.value ? parseInt(musicChannel.value) : null,
@@ -155,6 +160,9 @@ function connect() {
           case 'services-connected': {
             break;
           }
+          case 'pignage-info': {
+            break;
+          }
           default:
             log('error', 'Unknown message type:', message);
         }
@@ -204,6 +212,9 @@ function generateRandomString(length: number) {
 function setButtons() {
   let changed = false;
   if (settings && timerAddress.value !== (settings.timerAddress || '')) {
+    changed = true;
+  }
+  if (settings && primaryPignageAddress.value !== (settings.primaryPignageAddress || '')) {
     changed = true;
   }
   if (settings && qlabAddress.value !== (settings.qlabAddress || '')) {
