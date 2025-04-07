@@ -578,6 +578,9 @@ function initItemEditModal(
       modal.appendChild(nameDiv);
       const qlabDiv = document.createElement('div');
       qlabDiv.style.margin = '0.5em 0 0.5em 0';
+      qlabDiv.style.display = 'flex';
+      qlabDiv.style.flexDirection = 'column';
+      qlabDiv.style.overflow = 'hidden';
       const qlabHeader = document.createElement('div');
       qlabHeader.textContent = `QLab Cues:`;
       const editIcon = document.createElement('input');
@@ -676,6 +679,9 @@ function initItemEditModal(
           : pignageInfo.secondary;
         const pignageDiv = document.createElement('div');
         pignageDiv.style.margin = '0.5em 0 0.5em 0';
+        pignageDiv.style.display = 'flex';
+        pignageDiv.style.flexDirection = 'column';
+        pignageDiv.style.overflow = 'hidden';
         const pignageHeader = document.createElement('div');
         pignageHeader.textContent = `${
           !secondary ? 'Primary' : 'Secondary'
@@ -688,6 +694,7 @@ function initItemEditModal(
         pignageDiv.appendChild(pignageHeader);
         const pignageListDiv = document.createElement('div');
         pignageListDiv.style.margin = '0 1em';
+        pignageListDiv.style.overflowY = 'auto';
         function populatePignageList() {
           if (editIcon.checked) {
             pignageListDiv.innerHTML = '';
