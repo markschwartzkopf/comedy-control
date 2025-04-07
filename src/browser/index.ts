@@ -592,6 +592,7 @@ function initItemEditModal(
       qlabDiv.appendChild(qlabHeader);
       const qlabListDiv = document.createElement('div');
       qlabListDiv.style.margin = '0 1em';
+      qlabListDiv.style.overflowY = 'auto';
       function updateQlabList() {
         if (editIcon.checked) {
           function populateDetails(
