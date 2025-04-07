@@ -14,6 +14,9 @@ const timerAddress = document.getElementById(
 const primaryPignageAddress = document.getElementById(
   'primary-pignage-address'
 ) as HTMLInputElement;
+const secondaryPignageAddress = document.getElementById(
+  'secondary-pignage-address'
+) as HTMLInputElement;
 const qlabAddress = document.getElementById('qlab-address') as HTMLInputElement;
 const xairAddress = document.getElementById('xair-address') as HTMLInputElement;
 const musicChannel = document.getElementById(
@@ -24,6 +27,7 @@ const defaultPlaylist = document.getElementById(
 ) as HTMLInputElement;
 timerAddress.oninput = setButtons;
 primaryPignageAddress.oninput = setButtons;
+secondaryPignageAddress.oninput = setButtons;
 qlabAddress.oninput = setButtons;
 xairAddress.oninput = setButtons;
 musicChannel.oninput = setButtons;
@@ -37,7 +41,14 @@ saveButton.onclick = () => {
     type: 'settings',
     settings: {
       timerAddress: timerAddress.value || null,
-      primaryPignageAddress: primaryPignageAddress.value || null,
+      pignage: {
+        primary: {
+          address: primaryPignageAddress.value || null,
+        },
+        secondary: {
+          address: secondaryPignageAddress.value || null,
+        },
+      },
       qlabAddress: qlabAddress.value || null,
       xairAddress: xairAddress.value || null,
       musicChannel: musicChannel.value ? parseInt(musicChannel.value) : null,
@@ -214,7 +225,16 @@ function setButtons() {
   if (settings && timerAddress.value !== (settings.timerAddress || '')) {
     changed = true;
   }
-  if (settings && primaryPignageAddress.value !== (settings.primaryPignageAddress || '')) {
+  if (
+    settings &&
+    primaryPignageAddress.value !== (settings.pignage.primary.address || '')
+  ) {
+    changed = true;
+  }
+  if (
+    settings &&
+    secondaryPignageAddress.value !== (settings.pignage.secondary.address || '')
+  ) {
     changed = true;
   }
   if (settings && qlabAddress.value !== (settings.qlabAddress || '')) {
@@ -244,6 +264,12 @@ function setButtons() {
 
 function populateValues() {
   timerAddress.value = settings ? settings.timerAddress || '' : '';
+  primaryPignageAddress.value = settings
+    ? settings.pignage.primary.address || ''
+    : '';
+  secondaryPignageAddress.value = settings
+    ? settings.pignage.secondary.address || ''
+    : '';
   qlabAddress.value = settings ? settings.qlabAddress || '' : '';
   xairAddress.value = settings ? settings.xairAddress || '' : '';
   musicChannel.value = settings ? settings.musicChannel?.toString() || '' : '';

@@ -12,8 +12,14 @@ export type Settings = {
   xairAddress: string | null;
   timerAddress: string | null;
   qlabAddress: string | null;
-  primaryPignageAddress: string | null;
-  secondaryPignageAddress: string | null;
+  pignage: {
+    primary: {
+      address: string | null;
+    };
+    secondary: {
+      address: string | null;
+    };
+  };
   rundown: Rundown;
   currentRundownItem: number;
   govees: { [k: string]: string };
@@ -78,7 +84,7 @@ export type ServerMessagePignageInfo = {
   type: 'pignage-info';
   primary: slideInfo;
   secondary: slideInfo;
-}
+};
 
 export type ServerMessage =
   | ServerMessageFader
@@ -177,7 +183,10 @@ type RundownItemPreset = {
   type: 'preset';
   name: string;
   cueLabCues: MinQLabCue[];
-  primarySlide?: string | [string, string];
+  slide: {
+    primary?: string | [string, string];
+    secondary?: string | [string, string];
+  },
   endTime?: number;
 };
 
@@ -211,9 +220,9 @@ export type QLabCue = MinQLabCue & {
 };
 
 export type slideInfo = {
-  groups: {name: string; files: string[]}[];
+  groups: { name: string; files: string[] }[];
   pagesDir: string[];
-}
+};
 
 declare global {
   interface JSON {

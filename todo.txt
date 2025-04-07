@@ -1,3 +1,2 @@
-Secondary Pignage
 Govee integration
 Special timer control when editing current comic

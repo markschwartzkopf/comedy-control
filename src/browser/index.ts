@@ -366,6 +366,7 @@ function populateRundown() {
       editNewItem({
         type: 'preset',
         name: '',
+        slide: {},
         cueLabCues: [],
       });
     };
@@ -673,10 +674,8 @@ function initItemEditModal(
       updateQlabList();
       qlabDiv.appendChild(qlabListDiv);
       modal.appendChild(qlabDiv);
-      function makePignageDiv(secondary?: 'secondary') {
-        const pignage = !secondary
-          ? pignageInfo.primary
-          : pignageInfo.secondary;
+      function makePignageDiv(instance: 'primary' | 'secondary') {
+        const pignage = pignageInfo[instance];
         const pignageDiv = document.createElement('div');
         pignageDiv.style.margin = '0.5em 0 0.5em 0';
         pignageDiv.style.display = 'flex';
@@ -684,7 +683,7 @@ function initItemEditModal(
         pignageDiv.style.overflow = 'hidden';
         const pignageHeader = document.createElement('div');
         pignageHeader.textContent = `${
-          !secondary ? 'Primary' : 'Secondary'
+          instance === 'primary' ? 'Primary' : 'Secondary'
         } Pignage Display:`;
         const editIcon = document.createElement('input');
         editIcon.type = 'checkbox';
@@ -707,7 +706,7 @@ function initItemEditModal(
               const summaryEl = document.createElement('summary');
               summaryEl.classList.add('qlab-cue');
               summaryEl.textContent = name;
-              const checked = presetItem.primarySlide === name;
+              const checked = presetItem.slide[instance] === name;
               if (checked) summaryEl.classList.add('selected');
               if (!isPages) {
                 const btn = getSvgIcon(
@@ -719,8 +718,8 @@ function initItemEditModal(
                 btn.onclick = (e) => {
                   e.stopPropagation();
                   if (checked) {
-                    delete presetItem.primarySlide;
-                  } else presetItem.primarySlide = name;
+                    delete presetItem.slide[instance];
+                  } else presetItem.slide[instance] = name;
                   workingItem = presetItem;
                   setSaveButtonState();
                   populatePignageList();
@@ -734,11 +733,11 @@ function initItemEditModal(
                 fileEl.textContent = file;
                 fileEl.classList.add('qlab-cue');
                 const checked = isPages
-                  ? typeof presetItem.primarySlide === 'string' &&
-                    presetItem.primarySlide.split('?')[0] === file
-                  : Array.isArray(presetItem.primarySlide) &&
-                    presetItem.primarySlide[0] === name &&
-                    presetItem.primarySlide[1] === file;
+                  ? typeof presetItem.slide[instance] === 'string' &&
+                    presetItem.slide[instance].split('?')[0] === file
+                  : Array.isArray(presetItem.slide[instance]) &&
+                    presetItem.slide[instance][0] === name &&
+                    presetItem.slide[instance][1] === file;
                 if (checked) {
                   open = true;
                   fileEl.classList.add('selected');
@@ -748,10 +747,10 @@ function initItemEditModal(
                 argInput.placeholder = 'Arguments (optional)';
                 if (
                   checked &&
-                  typeof presetItem.primarySlide === 'string' &&
-                  presetItem.primarySlide.split(file)[1]
+                  typeof presetItem.slide[instance] === 'string' &&
+                  presetItem.slide[instance].split(file)[1]
                 ) {
-                  argInput.value = presetItem.primarySlide.split(file)[1];
+                  argInput.value = presetItem.slide[instance].split(file)[1];
                 }
                 argInput.style.padding = '0';
                 argInput.style.border = '0';
@@ -766,7 +765,7 @@ function initItemEditModal(
                         if (!args.startsWith('?')) args = '?' + args;
                         slide += args;
                       }
-                      presetItem.primarySlide = slide;
+                      presetItem.slide[instance] = slide;
                     }
                     workingItem = presetItem;
                     setSaveButtonState();
@@ -784,7 +783,7 @@ function initItemEditModal(
                 btn.onclick = (e) => {
                   e.stopPropagation();
                   if (checked) {
-                    delete presetItem.primarySlide;
+                    delete presetItem.slide[instance];
                   } else {
                     if (isPages) {
                       let slide = file;
@@ -793,8 +792,8 @@ function initItemEditModal(
                         if (!args.startsWith('?')) args = '?' + args;
                         slide += args;
                       }
-                      presetItem.primarySlide = slide;
-                    } else presetItem.primarySlide = [name, file];
+                      presetItem.slide[instance] = slide;
+                    } else presetItem.slide[instance] = [name, file];
                   }
                   workingItem = presetItem;
                   setSaveButtonState();
@@ -813,16 +812,17 @@ function initItemEditModal(
               createGroup('HTML Pages', pignage.pagesDir, 'isPages');
           } else {
             let list = 'none';
-            if (presetItem.primarySlide) {
-              if (typeof presetItem.primarySlide === 'string') {
-                const possibleFilename = presetItem.primarySlide.split('?')[0];
+            if (presetItem.slide[instance]) {
+              if (typeof presetItem.slide[instance] === 'string') {
+                const possibleFilename =
+                  presetItem.slide[instance].split('?')[0];
                 if (pignage.pagesDir.includes(possibleFilename)) {
-                  list = `HTML Page "${presetItem.primarySlide}"`;
+                  list = `HTML Page "${presetItem.slide[instance]}"`;
                 } else {
-                  list = `Play group "${presetItem.primarySlide}"`;
+                  list = `Play group "${presetItem.slide[instance]}"`;
                 }
               } else
-                list = `Play slide "${presetItem.primarySlide[1]}" from group "${presetItem.primarySlide[0]}"`;
+                list = `Play slide "${presetItem.slide[instance][1]}" from group "${presetItem.slide[instance][0]}"`;
             }
             pignageListDiv.innerHTML = list;
           }
@@ -832,8 +832,8 @@ function initItemEditModal(
         pignageDiv.appendChild(pignageListDiv);
         modal.appendChild(pignageDiv);
       }
-      makePignageDiv(); // Primary Pignage
-
+      makePignageDiv('primary');
+      makePignageDiv('secondary');
       break;
     }
   }

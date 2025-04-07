@@ -4,45 +4,34 @@ import { log } from './logger';
 import { util } from './main';
 import { WebSocket } from 'ws';
 
-let primaryAddress: string | null = null;
-let primarySocket: WebSocket | null = null;
-let primaryGroups: FileGroup[] = [];
-let primaryPagesDir: PagesDir = [];
-let primaryActiveSlide: string | [string, string] | null = null;
-let primaryPlayingGroup: string | null = null;
+const pignage = {
+  primary: {
+    address: null as string | null,
+    socket: null as WebSocket | null,
+    groups: [] as FileGroup[],
+    pagesDir: [] as PagesDir,
+    activeSlide: null as string | [string, string] | null,
+    playingGroup: null as string | null,
+  },
+  secondary: {
+    address: null as string | null,
+    socket: null as WebSocket | null,
+    groups: [] as FileGroup[],
+    pagesDir: [] as PagesDir,
+    activeSlide: null as string | [string, string] | null,
+    playingGroup: null as string | null,
+  },
+};
 
-function getPrimaryInfo(): slideInfo {
+function getInfo(instance: keyof typeof pignage): slideInfo {
   return {
-    groups: primaryGroups.map((group) => {
+    groups: pignage[instance].groups.map((group) => {
       return {
         name: group.name,
         files: group.files.map((file) => file.name),
       };
     }),
-    pagesDir: primaryPagesDir
-      .filter((file) => {
-        return file.isHtml;
-      })
-      .map((file) => file.name),
-  };
-}
-
-let secondaryAddress: string | null = null;
-let secondarySocket: WebSocket | null = null;
-let secondaryGroups: FileGroup[] = [];
-let secondaryPagesDir: PagesDir = [];
-let secondaryActiveSlide: string | [string, string] | null = null;
-let secondaryPlayingGroup: string | null = null;
-
-function getSecondaryInfo(): slideInfo {
-  return {
-    groups: secondaryGroups.map((group) => {
-      return {
-        name: group.name,
-        files: group.files.map((file) => file.name),
-      };
-    }),
-    pagesDir: secondaryPagesDir
+    pagesDir: pignage[instance].pagesDir
       .filter((file) => {
         return file.isHtml;
       })
@@ -52,38 +41,38 @@ function getSecondaryInfo(): slideInfo {
 
 export function getPignageInfo() {
   return {
-    primary: getPrimaryInfo(),
-    secondary: getSecondaryInfo(),
+    primary: getInfo('primary'),
+    secondary: getInfo('secondary'),
   };
 }
 
-setInterval(() => {
-  const newPrimaryAddress = util.getSettings().primaryPignageAddress;
+function repeater(instance: keyof typeof pignage) {
+  const newAddress = util.getSettings().pignage[instance].address;
   if (
-    newPrimaryAddress &&
-    (newPrimaryAddress !== primaryAddress || !primarySocket)
+    newAddress &&
+    (newAddress !== pignage[instance].address || !pignage[instance].socket)
   ) {
-    if (primarySocket) {
-      primarySocket.close();
-      primarySocket = null;
+    if (pignage[instance].socket) {
+      pignage[instance].socket.close();
+      pignage[instance].socket = null;
       return;
     }
-    primaryAddress = newPrimaryAddress;
-    const thisSocket = new WebSocket(`ws://${newPrimaryAddress}/`);
-    primarySocket = thisSocket;
+    pignage[instance].address = newAddress;
+    const thisSocket = new WebSocket(`ws://${newAddress}/`);
+    pignage[instance].socket = thisSocket;
     thisSocket.on('open', () => {
-      console.log('Connected to primary Pignage server at', newPrimaryAddress);
+      console.log(`Connected to ${instance} Pignage server at ${newAddress}`);
     });
     thisSocket.on('close', () => {
-      log('warn', 'Primary Pignage socket closed');
-      primarySocket = null;
+      log('warn', `${instance} Pignage socket closed`);
+      pignage[instance].socket = null;
     });
     thisSocket.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString()) as PignageServerMessage;
         switch (message.type) {
           case 'groups': {
-            primaryGroups = message.groups;
+            pignage[instance].groups = message.groups;
             sendServerMessage({
               type: 'pignage-info',
               ...getPignageInfo(),
@@ -91,7 +80,7 @@ setInterval(() => {
             break;
           }
           case 'pagesDir': {
-            primaryPagesDir = message.files;
+            pignage[instance].pagesDir = message.files;
             sendServerMessage({
               type: 'pignage-info',
               ...getPignageInfo(),
@@ -99,11 +88,11 @@ setInterval(() => {
             break;
           }
           case 'activeSlide': {
-            primaryActiveSlide = message.slide;
+            pignage[instance].activeSlide = message.slide;
             break;
           }
           case 'playingGroup': {
-            primaryPlayingGroup = message.group;
+            pignage[instance].playingGroup = message.group;
             break;
           }
           default: {
@@ -113,11 +102,16 @@ setInterval(() => {
       } catch {
         log(
           'error',
-          `Error parsing message from primary Pignage server: ${data.toString()}`
+          `Error parsing message from ${instance} Pignage server: ${data.toString()}`
         );
       }
     });
   }
+}
+
+setInterval(() => {
+  repeater('primary');
+  repeater('secondary');
 }, 1000);
 
 export function setComicCard(name: string, social: string) {
@@ -127,29 +121,35 @@ export function setComicCard(name: string, social: string) {
     args += (args ? '&' : '') + `social=${encodeURIComponent(social)}`;
   if (args) args = '?' + args;
   const newSlide = `card.html${args}`;
-  if (primaryActiveSlide !== newSlide) {
+  if (pignage.primary.activeSlide !== newSlide) {
     sendMessage('primary', {
+      type: 'activeSlide',
+      slide: `card.html${args}`,
+    });
+  }
+  if (pignage.secondary.activeSlide !== newSlide) {
+    sendMessage('secondary', {
       type: 'activeSlide',
       slide: `card.html${args}`,
     });
   }
 }
 
-export function setPrimarySlide(slide: string | [string, string]) {
+export function setSlide(slide: string | [string, string], instance: 'primary' | 'secondary') {  
   if (
     typeof slide === 'string' &&
-    primaryGroups.map((group) => group.name).includes(slide as string)
+    pignage[instance].groups.map((group) => group.name).includes(slide as string)
   ) {
-    if (primaryPlayingGroup !== slide) {
-      sendMessage('primary', {
+    if (pignage[instance].playingGroup !== slide) {
+      sendMessage(instance, {
         type: 'playGroup',
         group: slide,
       });
-      primaryPlayingGroup = slide as string;
+      pignage[instance].playingGroup = slide as string;
     }
   } else if (
-    !primaryActiveSlide ||
-    !slidesAreEqual(slide, primaryActiveSlide)
+    !pignage[instance].activeSlide ||
+    !slidesAreEqual(slide, pignage[instance].activeSlide)
   ) {
     sendMessage('primary', {
       type: 'activeSlide',
@@ -171,14 +171,14 @@ function slidesAreEqual(
 }
 
 function sendMessage(
-  pignage: 'primary' | 'secondary',
+  instance: 'primary' | 'secondary',
   message: PignageClientMessage
 ) {
-  const socket = pignage === 'primary' ? primarySocket : secondarySocket;
+  const socket = pignage[instance].socket;
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
   } else {
-    const address = pignage === 'primary' ? primaryAddress : secondaryAddress;
+    const address = pignage[instance].address;
     if (address) log('warn', `Pignage socket not open, can't send message`);
   }
 }

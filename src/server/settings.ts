@@ -12,15 +12,21 @@ import { log } from './logger';
 import { util } from './main';
 import { hasPropertyWithType } from './utils';
 import { connectXair } from './xair';
-import { setComicCard, setPrimarySlide } from './pignage';
+import { setComicCard, setSlide } from './pignage';
 
 let settings: Settings = {
   musicChannel: null,
   xairAddress: null,
   timerAddress: null,
   qlabAddress: null,
-  primaryPignageAddress: null,
-  secondaryPignageAddress: null,
+  pignage: {
+    primary: {
+      address: null,
+    },
+    secondary: {
+      address: null,
+    },
+  },
   rundown: [],
   currentRundownItem: 0,
   govees: { test: '172.19.1.42' },
@@ -107,8 +113,11 @@ function setSettings(newSettings: DeepPartial<Settings>) {
   if (currentItem && currentItem.type === 'comic') {
     setComicCard(currentItem.name, currentItem.social || '');
   } else {
-    if (currentItem && currentItem.primarySlide) {
-      setPrimarySlide(currentItem.primarySlide);
+    if (currentItem && currentItem.slide.primary) {
+      setSlide(currentItem.slide.primary, 'primary');
+    }
+    if (currentItem && currentItem.slide.secondary) {
+      setSlide(currentItem.slide.secondary, 'secondary');
     }
   }
   if (oldMixerAddress !== settings.xairAddress) {
@@ -212,16 +221,9 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
     hasPropertyWithType(input, 'xairAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'timerAddress', ['string', 'null', 'partial']) &&
     hasPropertyWithType(input, 'qlabAddress', ['string', 'null', 'partial']) &&
-    hasPropertyWithType(input, 'primaryPignageAddress', [
-      'string',
-      'null',
-      'partial',
-    ]) &&
-    hasPropertyWithType(input, 'secondaryPignageAddress', [
-      'string',
-      'null',
-      'partial',
-    ]) &&
+    (!('pignage' in input) || (
+      'pignage' in input && isPignage(input.pignage)
+    )) &&
     hasPropertyWithType(input, 'currentRundownItem', ['number', 'partial']) &&
     (!('rundown' in input) ||
       ('rundown' in input &&
@@ -232,6 +234,29 @@ export function isPartialSettings(input: unknown): input is Partial<Settings> {
       ('spotify' in input && isPartialSpotify(input.spotify)));
   if (!rtn) {
     log('error', 'Invalid settings data');
+  }
+  return rtn;
+}
+
+function isPignage(input: unknown): input is Settings['pignage'] {
+  const rtn =
+    typeof input === 'object' &&
+    input !== null &&
+    (!('primary' in input) || ('primary' in input && isPignageInstance(input.primary))) &&
+    (!('secondary' in input) || ('secondary' in input && isPignageInstance(input.secondary)));
+  if (!rtn) {
+    log('error', 'Invalid Pignage data');
+  }
+  return rtn;
+}
+
+function isPignageInstance(input: unknown): input is Settings['pignage']['primary'] {
+  const rtn =
+    typeof input === 'object' &&
+    input !== null &&
+    hasPropertyWithType(input, 'address', ['string', 'null', 'partial']);
+  if (!rtn) {
+    log('error', 'Invalid Pignage instance data');
   }
   return rtn;
 }
